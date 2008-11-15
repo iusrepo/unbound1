@@ -33,6 +33,14 @@ lockfile=/var/lock/subsys/unbound
 start() {
     [ -x $exec ] || exit 5
     [ -f $config ] || exit 6
+
+    if [ ! -f /var/lib/unbound/unbound_control.key ]
+    then
+	echo -n $"Generating unbound control key and certificate: "
+	/usr/sbin/unbound-control-setup > /dev/null 2> /dev/null
+	echo
+    fi
+
     echo -n $"Starting unbound: "
 
 	if [ ! -e ${rootdir}/etc/resolv.conf ] || /usr/bin/cmp -s /etc/resolv.conf ${rootdir}/etc/resolv.conf; then
