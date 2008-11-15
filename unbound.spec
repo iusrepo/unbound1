@@ -7,6 +7,7 @@ Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
+Source3: unbound.munin
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel, ldns-devel >= 1.4.0, libevent-devel
@@ -29,6 +30,15 @@ developed by Verisign labs, Nominet, Kirei and ep.net.
 Unbound is designed as a set of modular components, so that also
 DNSSEC (secure DNS) validation and stub-resolvers (that do not run
 as a server, but are linked into an application) are easily possible.
+
+%package munin
+Summary: Plugin for the munin / munin-node monitoring package
+Group:     System Environment/Daemons
+Requires: munin-node
+Requires: %{name} = %{version}-%{release}
+
+%description munin
+Plugin for the munin / munin-node monitoring package
 
 %package devel
 Summary: Development package that includes the unbound header files
@@ -68,6 +78,10 @@ install -d 0755 %{buildroot}%{_initrddir}
 install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
 #overwrite stock unbound.conf with our own
 install -m 0755 %{SOURCE2} %{buildroot}%{_localstatedir}/lib/%{name}
+install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
+install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
+install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
+install -m 0755 contrib/unbound_munin_ %{buildroot}%{_datadir}/munin/plugins/unbound
 
 # add symbolic link from /etc/unbound.conf -> /var/unbound/unbound.conf
 
@@ -107,6 +121,11 @@ rm -rf ${RPM_BUILD_ROOT}
 %attr(0644,root,root) %{_localstatedir}/lib/%{name}/etc/*
 %{_sbindir}/*
 %{_mandir}/*/*
+
+%files munin
+%defattr(-,root,root,-)
+%{_sysconfdir}/munin/plugin-conf.d/unbound
+%{_datadir}/munin/plugins/unbound
 
 %files devel
 %defattr(-,root,root,-)
@@ -148,8 +167,10 @@ fi
 %changelog
 * Fri Nov 14 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-1
 - Updated to version 1.1.0
-- Update unbound.conf's statistics options to work properly
-  for munin
+- Updated unbound.conf's statistics options and remote-control
+  to work properly for munin
+- Added unbound-munin package
+- Generate unbound remote-control  key/certs on first startup
 - Required ldns is now 1.4.0
 
 * Wed Oct 22 2008 Paul Wouters <paul@xelerance.com> - 1.0.2-5
