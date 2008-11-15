@@ -124,7 +124,7 @@ rm -rf ${RPM_BUILD_ROOT}
 
 %files munin
 %defattr(-,root,root,-)
-%{_sysconfdir}/munin/plugin-conf.d/unbound
+%config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
 %{_datadir}/munin/plugins/unbound
 
 %files devel
