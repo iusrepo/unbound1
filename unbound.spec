@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.0.2
-Release: 5%{?dist}
+Version: 1.1.0
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -9,12 +9,12 @@ Source1: unbound.init
 Source2: unbound.conf
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel, ldns-devel >= 1.3.0, libevent-devel
+BuildRequires: flex, openssl-devel, ldns-devel >= 1.4.0, libevent-devel
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
-Requires: ldns >= 1.3.0
+Requires: ldns >= 1.4.0
 Requires(pre): shadow-utils
 # Is this obsolete?
 #Provides: caching-nameserver
@@ -146,6 +146,12 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Fri Nov 14 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-1
+- Updated to version 1.1.0
+- Update unbound.conf's statistics options to work properly
+  for munin
+- Required ldns is now 1.4.0
+
 * Wed Oct 22 2008 Paul Wouters <paul@xelerance.com> - 1.0.2-5
 - Only call ldconfig in -libs package
 - Move configure into build section
