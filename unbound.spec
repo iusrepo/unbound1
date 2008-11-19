@@ -1,7 +1,9 @@
+%define rootdir %{_localstatedir}/lib/%{name}
+
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -19,6 +21,8 @@ Requires: ldns >= 1.4.0
 Requires(pre): shadow-utils
 # Is this obsolete?
 #Provides: caching-nameserver
+
+Patch0: unbound-1.1.0-log_open.patch
 
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
@@ -61,23 +65,25 @@ Contains libraries used by the unbound server and client applications
 %prep
 %setup -q 
 
+%patch0 -p1 -b .log_open
+
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
-            --with-run-dir=%{_localstatedir}/lib/%{name}\
-            --with-conf-file=%{_localstatedir}/lib/%{name}/unbound.conf \
+            --with-run-dir=%{rootdir} \
+            --with-conf-file=%{rootdir}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
 %{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
-install -d 0755 %{buildroot}%{_localstatedir}/lib/%{name}
+install -d 0755 %{buildroot}%{rootdir}
 install -d 0755 %{buildroot}%{_initrddir}
 #install -m 0755 contrib/unbound.init %{buildroot}%{_initrddir}/unbound
 install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
 #overwrite stock unbound.conf with our own
-install -m 0755 %{SOURCE2} %{buildroot}%{_localstatedir}/lib/%{name}
+install -m 0755 %{SOURCE2} %{buildroot}%{rootdir}
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
 install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
@@ -85,19 +91,14 @@ install -m 0755 contrib/unbound_munin_ %{buildroot}%{_datadir}/munin/plugins/unb
 
 # add symbolic link from /etc/unbound.conf -> /var/unbound/unbound.conf
 
-( cd %{buildroot}%{_sysconfdir}/ ; ln -s ..%{_localstatedir}/lib/unbound/unbound.conf )
+( cd %{buildroot}%{_sysconfdir}/ ; ln -s ..%{rootdir}/unbound.conf )
 # remove static library from install (fedora packaging guidelines)
 rm -rf %{buildroot}%{_libdir}/*.la
 
-# The chroot needs /dev/log, /dev/random, /etc/resolv.conf and /etc/localtime
+# The chroot needs /dev/random and /etc/localtime
 # but the init script uses mount --bind, so just create empty files
-mkdir -p %{buildroot}%{_localstatedir}/lib/unbound/etc \
-         %{buildroot}%{_localstatedir}/lib/unbound/dev 
-echo "Used for mount --bind in initscript" >  %{buildroot}%{_localstatedir}/lib/unbound/etc/resolv.conf 
-echo "Used for mount --bind in initscript" > %{buildroot}%{_localstatedir}/lib/unbound/etc/localtime
-echo "Used for mount --bind in initscript" > %{buildroot}%{_localstatedir}/lib/unbound/dev/log 
-echo "Used for mount --bind in initscript" > %{buildroot}%{_localstatedir}/lib/unbound/dev/random
-mkdir -p %{buildroot}%{_localstatedir}/lib/unbound/var/run/unbound
+mkdir -p %{buildroot}%{rootdir}/{dev,etc}
+touch %{buildroot}%{rootdir}/{etc/localtime,dev/random}
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
 %clean
@@ -107,18 +108,15 @@ rm -rf ${RPM_BUILD_ROOT}
 %defattr(-,root,root,-)
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %attr(0755,root,root) %{_initrddir}/%{name}
-# the chroot env
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/dev
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/etc
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/var
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/var/run
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/var/run/unbound
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/unbound.conf
-%attr(0644,root,root) %config(noreplace) %{_localstatedir}/lib/%{name}/unbound.conf
-%attr(0644,root,root) %{_localstatedir}/lib/%{name}/dev/*
-%attr(0644,root,root) %{_localstatedir}/lib/%{name}/etc/*
+# the chroot env
+%attr(0755,root,root) %dir %{rootdir}
+%attr(0755,root,root) %dir %{rootdir}/dev
+%attr(0755,root,root) %dir %{rootdir}/etc
+%attr(0644,root,root) %config(noreplace) %{rootdir}/unbound.conf
+%attr(0644,root,root) %ghost %{rootdir}/dev/random
+%attr(0644,root,root) %ghost %{rootdir}/etc/localtime
 %{_sbindir}/*
 %{_mandir}/*/*
 
@@ -141,20 +139,26 @@ rm -rf ${RPM_BUILD_ROOT}
 %pre
 getent group unbound >/dev/null || groupadd -r unbound
 getent passwd unbound >/dev/null || \
-useradd -r -g unbound -d %{_localstatedir}/lib/%{name} -s /sbin/nologin \
+useradd -r -g unbound -d %{rootdir} -s /sbin/nologin \
 -c "Unbound DNS resolver" unbound
 exit 0
 
 %post 
 /sbin/chkconfig --add %{name}
 
+# Add chroot stuff
+[ -e %{rootdir}/dev/random ] || /bin/mknod %{rootdir}/dev/random c 1 8
+[ -s %{rootdir}/etc/localtime ] || cp -fp  {,%{rootdir}}/etc/localtime
+
 %post libs -p /sbin/ldconfig
 
 
 %preun
-if [ $1 -eq 0 ]; then
+if [ "$1" -eq 0 ]; then
         /sbin/service %{name} stop >/dev/null 2>&1
         /sbin/chkconfig --del %{name} 
+	rm -f %{rootdir}/dev/random
+	rm -f %{rootdir}/etc/localtime
 fi
 
 %postun 
@@ -165,6 +169,15 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed Nov 19 2008 Adam Tkac <atkac redhat com> - 1.1.0-2
+- unbound-1.1.0-log_open.patch
+  - make sure log is opened before chroot call
+  - tracked as http://www.nlnetlabs.nl/bugs/show_bug.cgi?id=219
+- removed /dev/log and /var/run/unbound and /etc/resolv.conf from
+  chroot, not needed
+- don't mount files in chroot, it causes problems during updates
+- fixed typo in default config file
+
 * Fri Nov 14 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-1
 - Updated to version 1.1.0
 - Updated unbound.conf's statistics options and remote-control
