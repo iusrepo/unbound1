@@ -22,7 +22,7 @@
 . /etc/rc.d/init.d/functions
 
 exec="/usr/sbin/unbound"
-config="/var/lib/unbound/unbound.conf"
+config="/etc/unbound/unbound.conf"
 rootdir="/var/lib/unbound"
 pidfile="/var/run/unbound/unbound.pid"
 
@@ -34,16 +34,14 @@ start() {
     [ -x $exec ] || exit 5
     [ -f $config ] || exit 6
 
-    if [ ! -f /var/lib/unbound/unbound_control.key ]
+    if [ ! -f /etc/unbound/unbound_control.key ]
     then
 	echo -n $"Generating unbound control key and certificate: "
-	/usr/sbin/unbound-control-setup > /dev/null 2> /dev/null
+	/usr/sbin/unbound-control-setup -d /etc/unbound/ > /dev/null 2> /dev/null
 	echo
     fi
 
     echo -n $"Starting unbound: "
-
-	[ -s ${rootdir}/etc/localtime ] || cp -fp /etc/localtime ${rootdir}/etc/localtime
 
     # if not running, start it up here
     daemon $exec

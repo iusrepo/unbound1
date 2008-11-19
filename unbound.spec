@@ -3,7 +3,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -71,7 +71,7 @@ Contains libraries used by the unbound server and client applications
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
             --with-run-dir=%{rootdir} \
-            --with-conf-file=%{rootdir}/unbound.conf \
+            --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
 %{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
 
@@ -80,25 +80,20 @@ rm -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
 install -d 0755 %{buildroot}%{rootdir}
 install -d 0755 %{buildroot}%{_initrddir}
-#install -m 0755 contrib/unbound.init %{buildroot}%{_initrddir}/unbound
 install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
-#overwrite stock unbound.conf with our own
-install -m 0755 %{SOURCE2} %{buildroot}%{rootdir}
+install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
+# Install munin plugin and its softlinks
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
 install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
 install -m 0755 contrib/unbound_munin_ %{buildroot}%{_datadir}/munin/plugins/unbound
+for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
+    ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
+done 
 
-# add symbolic link from /etc/unbound.conf -> /var/unbound/unbound.conf
-
-( cd %{buildroot}%{_sysconfdir}/ ; ln -s ..%{rootdir}/unbound.conf )
 # remove static library from install (fedora packaging guidelines)
 rm -rf %{buildroot}%{_libdir}/*.la
 
-# The chroot needs /dev/random and /etc/localtime
-# but the init script uses mount --bind, so just create empty files
-mkdir -p %{buildroot}%{rootdir}/{dev,etc}
-touch %{buildroot}%{rootdir}/{etc/localtime,dev/random}
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
 %clean
@@ -109,21 +104,16 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %attr(0755,root,root) %{_initrddir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/unbound.conf
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 # the chroot env
 %attr(0755,root,root) %dir %{rootdir}
-%attr(0755,root,root) %dir %{rootdir}/dev
-%attr(0755,root,root) %dir %{rootdir}/etc
-%attr(0644,root,root) %config(noreplace) %{rootdir}/unbound.conf
-%attr(0644,root,root) %ghost %{rootdir}/dev/random
-%attr(0644,root,root) %ghost %{rootdir}/etc/localtime
 %{_sbindir}/*
 %{_mandir}/*/*
 
 %files munin
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
-%{_datadir}/munin/plugins/unbound
+%{_datadir}/munin/plugins/unbound*
 
 %files devel
 %defattr(-,root,root,-)
@@ -146,9 +136,18 @@ exit 0
 %post 
 /sbin/chkconfig --add %{name}
 
-# Add chroot stuff
-[ -e %{rootdir}/dev/random ] || /bin/mknod %{rootdir}/dev/random c 1 8
-[ -s %{rootdir}/etc/localtime ] || cp -fp  {,%{rootdir}}/etc/localtime
+# if our config lives in /var/lib/unbound, move it to /etc/unbound/unbound.conf
+if [ -f %{_localstatedir}/lib/%{name}/unbound.conf ]; then
+     rm -f %{_sysconfdir}/unbound.conf.rpmnew
+     mv  %{_sysconfdir}/unbound.conf  %{_sysconfdir}/unbound.conf.rpmnew
+     mv %{_localstatedir}/lib/%{name}/unbound.conf %{_sysconfdir}/unbound.conf
+     if [ -L %{_sysconfdir}/unbound.conf ]; then
+          rm -f %{_sysconfdir}/unbound.conf
+     fi
+fi
+# Remove old chroot stuff - not using rootdir in purpose in case it changes
+rm -rf %{_localstatedir}/lib/%{name}/dev %{_localstatedir}/lib/%{name}/etc \
+       %{_localstatedir}/lib/%{name}/var
 
 %post libs -p /sbin/ldconfig
 
@@ -157,8 +156,6 @@ exit 0
 if [ "$1" -eq 0 ]; then
         /sbin/service %{name} stop >/dev/null 2>&1
         /sbin/chkconfig --del %{name} 
-	rm -f %{rootdir}/dev/random
-	rm -f %{rootdir}/etc/localtime
 fi
 
 %postun 
@@ -169,6 +166,14 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed Nov 19 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-3
+- Remove the chroot, obsoleted by SElinux
+- Add additional munin plugin links supported by unbound plugin
+- Move configuration directory from /var/lib/unbound to /etc/unbound
+- Modified unbound.init and unbound.conf to account for chroot changes
+- Updated unbound.conf with new available options
+- Enabled dns-0x20 protection per default
+
 * Wed Nov 19 2008 Adam Tkac <atkac redhat com> - 1.1.0-2
 - unbound-1.1.0-log_open.patch
   - make sure log is opened before chroot call
