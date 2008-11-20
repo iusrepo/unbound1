@@ -2,8 +2,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.1.0
-Release: 3%{?dist}
+Version: 1.1.1
+Release: 0%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -21,8 +21,6 @@ Requires: ldns >= 1.4.0
 Requires(pre): shadow-utils
 # Is this obsolete?
 #Provides: caching-nameserver
-
-Patch0: unbound-1.1.0-log_open.patch
 
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
@@ -64,8 +62,6 @@ Contains libraries used by the unbound server and client applications
 
 %prep
 %setup -q 
-
-%patch0 -p1 -b .log_open
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -166,6 +162,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Thu Nov 20 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-1
+- Updated to unbound 1.1.1 which fixes a crasher and
+  addresses nlnetlabs bug #219
+
 * Wed Nov 19 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-3
 - Remove the chroot, obsoleted by SElinux
 - Add additional munin plugin links supported by unbound plugin
