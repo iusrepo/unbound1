@@ -1,9 +1,7 @@
-%define rootdir %{_localstatedir}/lib/%{name}
-
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.1
-Release: 0%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -66,7 +64,6 @@ Contains libraries used by the unbound server and client applications
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
-            --with-run-dir=%{rootdir} \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
 %{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
@@ -74,7 +71,6 @@ Contains libraries used by the unbound server and client applications
 %install
 rm -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
-install -d 0755 %{buildroot}%{rootdir}
 install -d 0755 %{buildroot}%{_initrddir}
 install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
 install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
@@ -101,8 +97,6 @@ rm -rf ${RPM_BUILD_ROOT}
 %attr(0755,root,root) %{_initrddir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
-# the chroot env
-%attr(0755,root,root) %dir %{rootdir}
 %{_sbindir}/*
 %{_mandir}/*/*
 
@@ -125,25 +119,12 @@ rm -rf ${RPM_BUILD_ROOT}
 %pre
 getent group unbound >/dev/null || groupadd -r unbound
 getent passwd unbound >/dev/null || \
-useradd -r -g unbound -d %{rootdir} -s /sbin/nologin \
+useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 -c "Unbound DNS resolver" unbound
 exit 0
 
 %post 
 /sbin/chkconfig --add %{name}
-
-# if our config lives in /var/lib/unbound, move it to /etc/unbound/unbound.conf
-if [ -f %{_localstatedir}/lib/%{name}/unbound.conf ]; then
-     rm -f %{_sysconfdir}/unbound.conf.rpmnew
-     mv  %{_sysconfdir}/unbound.conf  %{_sysconfdir}/unbound.conf.rpmnew
-     mv %{_localstatedir}/lib/%{name}/unbound.conf %{_sysconfdir}/unbound.conf
-     if [ -L %{_sysconfdir}/unbound.conf ]; then
-          rm -f %{_sysconfdir}/unbound.conf
-     fi
-fi
-# Remove old chroot stuff - not using rootdir in purpose in case it changes
-rm -rf %{_localstatedir}/lib/%{name}/dev %{_localstatedir}/lib/%{name}/etc \
-       %{_localstatedir}/lib/%{name}/var
 
 %post libs -p /sbin/ldconfig
 
@@ -162,6 +143,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Fri Nov 28 2008 Adam Tkac <atkac redhat com> - 1.1.1-2
+- removed all obsolete chroot related stuff
+- label control certs after generation correctly
+
 * Thu Nov 20 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-1
 - Updated to unbound 1.1.1 which fixes a crasher and
   addresses nlnetlabs bug #219

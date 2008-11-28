@@ -38,6 +38,8 @@ start() {
     then
 	echo -n $"Generating unbound control key and certificate: "
 	/usr/sbin/unbound-control-setup -d /etc/unbound/ > /dev/null 2> /dev/null
+	[ -x /usr/sbin/selinuxenabled ] && /usr/sbin/selinuxenabled && \
+	    [ -x /sbin/restorecon ] && /sbin/restorecon /etc/unbound/*
 	echo
     fi
 
