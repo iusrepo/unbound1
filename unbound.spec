@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -95,6 +95,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %defattr(-,root,root,-)
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %attr(0755,root,root) %{_initrddir}/%{name}
+%attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %{_sbindir}/*
@@ -143,6 +144,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Dec  1 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-3
+- We did not own the /etc/unbound directory (#474020)
+- Fixed cvs anomalies
+
 * Fri Nov 28 2008 Adam Tkac <atkac redhat com> - 1.1.1-2
 - removed all obsolete chroot related stuff
 - label control certs after generation correctly
@@ -210,6 +215,3 @@ fi
 
 * Wed Apr 23 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 0.11
 - Initial version.
-
-
-
