@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -17,6 +17,7 @@ Requires(preun): initscripts
 Requires(postun): initscripts
 Requires: ldns >= 1.4.0
 Requires(pre): shadow-utils
+Requires: selinux-policy >= 3.5.13-33
 # Is this obsolete?
 #Provides: caching-nameserver
 
@@ -144,6 +145,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Dec  8 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-4
+- Added Requires: for selinux-policy >= 3.5.13-33 for proper SElinux rules.
+
 * Mon Dec  1 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-3
 - We did not own the /etc/unbound directory (#474020)
 - Fixed cvs anomalies
