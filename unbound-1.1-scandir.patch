@@ -38,7 +38,7 @@ Index: validator/val_anchor.c
 +				free(fnameb);
 +				free(fnamef);
 +				free(globmatch);
-+				return 0;
++				return 1;
 +			}
 +			else {
 +				while(n--) {
