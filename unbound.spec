@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.1
-Release: 5%{?dist}
+Release: 6%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -147,7 +147,7 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
-* Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-5
+* Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-6
 - Added scandir patch for trusted-keys-file: option, which
   is used to load multiple dnssec keys in bind file format
 
