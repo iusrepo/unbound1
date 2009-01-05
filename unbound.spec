@@ -1,13 +1,14 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.1.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
+Patch0: unbound-1.1-scandir.patch
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel, ldns-devel >= 1.4.0, libevent-devel
@@ -61,6 +62,7 @@ Contains libraries used by the unbound server and client applications
 
 %prep
 %setup -q 
+%patch -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -145,6 +147,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-5
+- Added scandir patch for trusted-keys-file: option, which
+  is used to load multiple dnssec keys in bind file format
+
 * Mon Dec  8 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-4
 - Added Requires: for selinux-policy >= 3.5.13-33 for proper SElinux rules.
 
