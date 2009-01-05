@@ -62,7 +62,7 @@ Contains libraries used by the unbound server and client applications
 
 %prep
 %setup -q 
-%patch -p0
+%patch0 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
