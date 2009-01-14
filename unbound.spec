@@ -10,7 +10,8 @@ Source2: unbound.conf
 Source3: unbound.munin
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel, ldns-devel >= 1.4.0, libevent-devel
+BuildRequires: flex, openssl-devel >= 0.9.8g-12, ldns-devel >= 1.4.0, 
+#BuildRequires libevent-devel >= 1.4.5
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
@@ -43,8 +44,8 @@ Plugin for the munin / munin-node monitoring package
 %package devel
 Summary: Development package that includes the unbound header files
 Group: Development/Libraries
-Requires: %{name}-libs = %{version}-%{release}, openssl-devel >= 0.9.8g-12, ldns-devel
-Requires: libevent-devel
+Requires: %{name}-libs = %{version}-%{release}, openssl-devel, ldns-devel
+#Requires: libevent-devel >= 1.4.5
 
 %description devel
 The devel package contains the unbound library and the include files
@@ -63,7 +64,8 @@ Contains libraries used by the unbound server and client applications
 %setup -q 
 
 %build
-%configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
+#%configure  --with-ldns= -with-libevent --with-pthreads --with-ssl 
+%configure  --with-ldns= --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
