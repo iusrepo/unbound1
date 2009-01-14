@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.1.1
-Release: 7%{?dist}
+Version: 1.2.0
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -19,7 +19,6 @@ Requires(preun): initscripts
 Requires(postun): initscripts
 Requires: ldns >= 1.4.0
 Requires(pre): shadow-utils
-Requires: selinux-policy >= 3.5.13-33
 # Is this obsolete?
 #Provides: caching-nameserver
 
@@ -38,7 +37,7 @@ as a server, but are linked into an application) are easily possible.
 Summary: Plugin for the munin / munin-node monitoring package
 Group:     System Environment/Daemons
 Requires: munin-node
-Requires: %{name} = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}, bc
 
 %description munin
 Plugin for the munin / munin-node monitoring package
@@ -46,7 +45,7 @@ Plugin for the munin / munin-node monitoring package
 %package devel
 Summary: Development package that includes the unbound header files
 Group: Development/Libraries
-Requires: %{name}-libs = %{version}-%{release}, openssl-devel, ldns-devel
+Requires: %{name}-libs = %{version}-%{release}, openssl-devel >= 0.9.8g-12, ldns-devel
 Requires: libevent-devel
 
 %description devel
@@ -57,6 +56,7 @@ Summary: Libraries used by the unbound server and client applications
 Group: Applications/System
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
+Requires: openssl >= 0.9.8g-12
 
 %description libs
 Contains libraries used by the unbound server and client applications
@@ -149,6 +149,16 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed Jan 14 2009 Paul Wouters <paul@xelerance.com - 1.2.0-1
+- Updated to 1.2.0
+- Added dependancy on minimum SSL for CVE-2008-5077
+- Added dependancy on bc for unbound-munin
+- Removed dependancy on selinux-policy (will get used when available)
+- Enable options as per draft-wijngaards-dnsext-resolver-side-mitigation-00.txt
+- Enable unwanted-reply-threshold to mitigate against a Kaminsky attack
+- Enable val-clean-additional to drop addition unsigned data from signed
+  response.
+
 * Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-7
 - Modified scandir patch to silently fail when wildcard matches nothing
 - Patch to allow unbound-checkconf to find empty wildcard matches
