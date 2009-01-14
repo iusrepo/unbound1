@@ -8,8 +8,6 @@ Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
-Patch0: unbound-1.1-scandir.patch
-Patch1: unbound-1.1-checkconf.patch
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel, ldns-devel >= 1.4.0, libevent-devel
@@ -63,8 +61,6 @@ Contains libraries used by the unbound server and client applications
 
 %prep
 %setup -q 
-%patch0 -p0
-%patch1 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -158,6 +154,7 @@ fi
 - Enable unwanted-reply-threshold to mitigate against a Kaminsky attack
 - Enable val-clean-additional to drop addition unsigned data from signed
   response.
+- Removed patches (got merged into upstream)
 
 * Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-7
 - Modified scandir patch to silently fail when wildcard matches nothing
