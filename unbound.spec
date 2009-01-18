@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.2.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -145,6 +145,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sun Jan 18 2009 Tomas Mraz <tmraz@redhat.com> - 1.2.0-2
+- rebuild with new openssl
+
 * Wed Jan 14 2009 Paul Wouters <paul@xelerance.com - 1.2.0-1
 - Updated to 1.2.0
 - Added dependancy on minimum SSL for CVE-2008-5077
