@@ -25,6 +25,7 @@ exec="/usr/sbin/unbound"
 config="/etc/unbound/unbound.conf"
 rootdir="/var/lib/unbound"
 pidfile="/var/run/unbound/unbound.pid"
+piddir=`dirname $pidfile`
 
 [ -e /etc/sysconfig/unbound ] && . /etc/sysconfig/unbound
 
@@ -33,6 +34,8 @@ lockfile=/var/lock/subsys/unbound
 start() {
     [ -x $exec ] || exit 5
     [ -f $config ] || exit 6
+    # /var/run could (and should) be tmpfs
+    [ -d $piddir ] || mkdir $piddir
 
     if [ ! -f /etc/unbound/unbound_control.key ]
     then
@@ -46,7 +49,7 @@ start() {
     echo -n $"Starting unbound: "
 
     # if not running, start it up here
-    daemon $exec
+    daemon --pidfile=$pidfile $exec
     retval=$?
     [ $retval -eq 0 ] && touch $lockfile
     echo
