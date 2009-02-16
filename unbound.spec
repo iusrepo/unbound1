@@ -63,7 +63,7 @@ Contains libraries used by the unbound server and client applications
 %setup -q 
 
 %build
-%configure  --with-ldns= -with-libevent --with-pthreads --with-ssl \
+%configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
