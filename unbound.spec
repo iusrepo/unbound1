@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.2.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -18,6 +18,7 @@ Requires(preun): initscripts
 Requires(postun): initscripts
 Requires: ldns >= 1.5.0
 Requires(pre): shadow-utils
+Requires: dnssec-conf
 # Is this obsolete?
 #Provides: caching-nameserver
 
@@ -125,11 +126,15 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 -c "Unbound DNS resolver" unbound
 exit 0
 
-%post 
+%post
+# Enable DNSSEC per default
+if [ "$1" -eq 1 ]; then
+    [ -x /usr/sbin/dnssec-configure ] && \
+	dnssec-configure -u --norestart --dnssec=on --dlv=off > /dev/null 2>&1
+fi
 /sbin/chkconfig --add %{name}
 
 %post libs -p /sbin/ldconfig
-
 
 %preun
 if [ "$1" -eq 0 ]; then
@@ -145,6 +150,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Mar 09 2009 Adam Tkac <atkac redhat com> - 1.2.1-3
+- add DNSSEC support to initscript and enabled it per default
+- add requires dnssec-conf
+
 * Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.2.1-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
 

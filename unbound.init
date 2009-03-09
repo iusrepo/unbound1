@@ -28,8 +28,13 @@ pidfile="/var/run/unbound/unbound.pid"
 piddir=`dirname $pidfile`
 
 [ -e /etc/sysconfig/unbound ] && . /etc/sysconfig/unbound
+[ -e /etc/sysconfig/dnssec ] && . /etc/sysconfig/dnssec
 
 lockfile=/var/lock/subsys/unbound
+
+[ -x /usr/sbin/dnssec-configure ] && [ -r "$config" ] &&
+  [ /etc/sysconfig/dnssec -nt "$config" ] && \
+    /usr/sbin/dnssec-configure -u --norestart --dnssec="$DNSSEC" --dlv="$DLV"
 
 start() {
     [ -x $exec ] || exit 5
