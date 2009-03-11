@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.2.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -127,12 +127,16 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 exit 0
 
 %post
-# Enable DNSSEC per default
-if [ "$1" -eq 1 ]; then
-    [ -x /usr/sbin/dnssec-configure ] && \
-	dnssec-configure -u --norestart --dnssec=on --dlv=off > /dev/null 2>&1
-fi
 /sbin/chkconfig --add %{name}
+# Check DNSSEC settings if this is a fresh install
+if [ "$1" -eq 1 ]; then
+  if [ -r /etc/sysconfig/dnssec ]; then
+    . /etc/sysconfig/dnssec
+    [ -x /usr/sbin/dnssec-configure ] && \
+      dnssec-configure -u --norestart --dnssec="$DNSSEC" --dlv="$DLV" > \
+        /dev/null 2>&1
+  fi;
+fi
 
 %post libs -p /sbin/ldconfig
 
@@ -150,6 +154,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Tue Mar 10 2009 Adam Tkac <atkac redhat com> - 1.2.1-4
+- enable DNSSEC only if it is enabled in sysconfig/dnssec
+
 * Mon Mar 09 2009 Adam Tkac <atkac redhat com> - 1.2.1-3
 - add DNSSEC support to initscript and enabled it per default
 - add requires dnssec-conf
