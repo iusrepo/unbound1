@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.2.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -16,7 +16,7 @@ Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
-Requires: ldns >= 1.5.0
+Requires: ldns >= 1.5.0, dnssec-conf >= 1.19
 Requires(pre): shadow-utils
 Requires: dnssec-conf
 # Is this obsolete?
@@ -133,7 +133,7 @@ if [ "$1" -eq 1 ]; then
   if [ -r /etc/sysconfig/dnssec ]; then
     . /etc/sysconfig/dnssec
     [ -x /usr/sbin/dnssec-configure ] && \
-      dnssec-configure -u --norestart --dnssec="$DNSSEC" --dlv="$DLV" > \
+      dnssec-configure -u --norestart --nocheck --dnssec="$DNSSEC" --dlv="$DLV" > \
         /dev/null 2>&1
   fi;
 fi
@@ -154,6 +154,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Tue Mar 17 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-5
+- Use --nocheck to avoid giving an error on missing unbound-remote certs/keys
+
 * Tue Mar 10 2009 Adam Tkac <atkac redhat com> - 1.2.1-4
 - enable DNSSEC only if it is enabled in sysconfig/dnssec
 
