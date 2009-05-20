@@ -1,7 +1,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.2.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -158,6 +158,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed May 20 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-7
+- unbound-iterator.patch was not commited
+
 * Wed May 20 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-6
 - Fix for https://bugzilla.redhat.com/show_bug.cgi?id=499793
 
