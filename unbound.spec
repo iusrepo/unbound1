@@ -1,13 +1,14 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.2.1
-Release: 5%{?dist}
+Release: 6%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
+Patch0: unbound-iterator.patch
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel >= 0.9.8g-12, ldns-devel >= 1.5.0, 
@@ -62,6 +63,7 @@ Contains libraries used by the unbound server and client applications
 
 %prep
 %setup -q 
+%patch0 
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -154,6 +156,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed May 20 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-6
+- Fix for https://bugzilla.redhat.com/show_bug.cgi?id=499793
+
 * Tue Mar 17 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-5
 - Use --nocheck to avoid giving an error on missing unbound-remote certs/keys
 

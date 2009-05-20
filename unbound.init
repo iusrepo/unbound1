@@ -46,9 +46,19 @@ start() {
     then
 	echo -n $"Generating unbound control key and certificate: "
 	/usr/sbin/unbound-control-setup -d /etc/unbound/ > /dev/null 2> /dev/null
+	chgrp unbound /etc/unbound/unbound_*key /etc/unbound/unbound_*pem
 	[ -x /usr/sbin/selinuxenabled ] && /usr/sbin/selinuxenabled && \
 	    [ -x /sbin/restorecon ] && /sbin/restorecon /etc/unbound/*
 	echo
+    else
+	# old init script created these as root instead of unbound.
+	if [ -G /etc/unbound/unbound_control.key ]
+	then
+	    chgrp unbound /etc/unbound/unbound_*key /etc/unbound/unbound_*pem
+	    [ -x /usr/sbin/selinuxenabled ] && /usr/sbin/selinuxenabled && \
+		[ -x /sbin/restorecon ] && /sbin/restorecon /etc/unbound/*
+	    echo
+	fi
     fi
 
     echo -n $"Starting unbound: "
