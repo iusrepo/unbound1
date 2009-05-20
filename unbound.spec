@@ -9,6 +9,7 @@ Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
 Patch0: unbound-iterator.patch
+Patch1: unbound-initgroups-r1453.patch
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel >= 0.9.8g-12, ldns-devel >= 1.5.0, 
@@ -64,6 +65,7 @@ Contains libraries used by the unbound server and client applications
 %prep
 %setup -q 
 %patch0 
+%patch1 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
