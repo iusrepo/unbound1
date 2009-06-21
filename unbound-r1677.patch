@@ -1,0 +1,33 @@
+Index: validator/validator.c
+===================================================================
+--- validator/validator.c	(revision 1677)
++++ validator/validator.c	(working copy)
+@@ -479,7 +479,7 @@
+ }
+ 
+ /**
+- * Detect wrong truncated response, by a bad recursor out there.
++ * Detect wrong truncated response (from BIND 9.6.1 with minimal-responses).
+  * The positive response has a mangled authority section.
+  * Remove that authority section.
+  * @param rep: reply
+Index: iterator/iterator.c
+===================================================================
+--- iterator/iterator.c	(revision 1677)
++++ iterator/iterator.c	(working copy)
+@@ -1513,9 +1513,14 @@
+ 			   /* we know that all other NS rrsets are scrubbed
+ 			    * away, thus on referral only one is left.
+ 			    * see if that equals the query name... */
+-			&& reply_find_rrset_section_ns(iq->response->rep,
++			&& ( /* auth section, but sometimes in answer section*/
++			  reply_find_rrset_section_ns(iq->response->rep,
+ 				qstate->qinfo.qname, qstate->qinfo.qname_len,
+ 				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
++			  || reply_find_rrset_section_an(iq->response->rep,
++				qstate->qinfo.qname, qstate->qinfo.qname_len,
++				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
++			  )
+ 		    )) {
+ 			/* Store the referral under the current query */
+ 			if(!iter_dns_store(qstate->env, &iq->response->qinfo,

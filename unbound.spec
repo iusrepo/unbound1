@@ -1,19 +1,32 @@
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
+# not ready yet
+%{?!with_python:      %define with_python      0}
+
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.2.1
-Release: 7%{?dist}
+Version: 1.3.0
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
-Patch0: unbound-iterator.patch
-Patch1: unbound-initgroups-r1453.patch
+# See the unbound svn repository for further documentation on these
+Patch1: unbound-r1657.patch
+Patch2: unbound-r1670.patch
+Patch3: unbound-r1677.patch
+Patch4: unbound-1.2-glob.patch
+
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel >= 0.9.8g-12, ldns-devel >= 1.5.0, 
-BuildRequires: libevent-devel >= 1.4.5
+BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
+BuildRequires: libevent-devel 
+%if %{with_python}
+BuildRequires:  python-devel
+%endif
+
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
@@ -21,8 +34,6 @@ Requires(postun): initscripts
 Requires: ldns >= 1.5.0, dnssec-conf >= 1.19
 Requires(pre): shadow-utils
 Requires: dnssec-conf
-# Is this obsolete?
-#Provides: caching-nameserver
 
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
@@ -62,16 +73,32 @@ Requires: openssl >= 0.9.8g-12
 %description libs
 Contains libraries used by the unbound server and client applications
 
+%if %{with_python}
+%package python
+Summary: Python modules and extensions for unbound
+Group: Applications/System
+Requires: %{name}-libs = %{version}-%{release}
+
+%description python
+Python modules and extensions for unbound
+%endif
+
 %prep
 %setup -q 
-%patch0 
-%patch1 -p1
+%patch1
+%patch2
+%patch3
+%patch4 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
-            --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
+            --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \
+%if %{with_python}
+            --with-pythonmodule --with-pyunbound \
+%endif
+            --enable-sha2 
 %{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
 
 %install
@@ -106,6 +133,11 @@ rm -rf ${RPM_BUILD_ROOT}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %{_sbindir}/*
 %{_mandir}/*/*
+
+%if %{with_python}
+%files python
+%{python_sitelib}/*
+%endif
 
 %files munin
 %defattr(-,root,root,-)
@@ -158,6 +190,16 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sat Jun 20 2009 Paul Wouters <paul@xelerance.com> - 1.3.0-1
+- Updated to 1.3.0
+- Added unbound-python sub package. disabled for now
+- Patch from svn to fix DLV lookups
+- Patches from svn to detect wrong truncated response from BIND 9.6.1 with
+  minimal-responses)
+- Added Default-Start and Default-Stop to unbound.init
+- Re-enabled --enable-sha2
+- Re-enabled glob.patch
+
 * Wed May 20 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-7
 - unbound-iterator.patch was not commited
 
