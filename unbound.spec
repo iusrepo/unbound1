@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.3.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -193,6 +193,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sun Jul 26 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.3.0-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_12_Mass_Rebuild
+
 * Sat Jun 20 2009 Paul Wouters <paul@xelerance.com> - 1.3.0-2
 - Added missing glob patch to cvs
 - Place python macros within the %%with_python check
