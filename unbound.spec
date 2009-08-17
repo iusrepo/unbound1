@@ -8,8 +8,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.3.0
-Release: 3%{?dist}
+Version: 1.3.3
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -17,9 +17,9 @@ Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
 # See the unbound svn repository for further documentation on these
-Patch1: unbound-r1657.patch
-Patch2: unbound-r1670.patch
-Patch3: unbound-r1677.patch
+#Patch1: unbound-r1657.patch
+#Patch2: unbound-r1670.patch
+#Patch3: unbound-r1677.patch
 Patch4: unbound-1.2-glob.patch
 
 Group: System Environment/Daemons
@@ -88,9 +88,9 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-%patch1
-%patch2
-%patch3
+#%patch1
+#%patch2
+#%patch3
 %patch4 -p1
 
 %build
@@ -193,6 +193,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Aug 17 2009 Paul Wouters <paul@xelerance.com> - 1.3.3-1
+- Updated to 1.3.3
+
 * Sun Jul 26 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.3.0-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_12_Mass_Rebuild
 
