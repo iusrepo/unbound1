@@ -1,5 +1,5 @@
 # not ready yet
-%{?!with_python:      %define with_python      0}
+%{?!with_python:      %global with_python      0}
 
 %if %{with_python}
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
@@ -8,8 +8,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.3.4
-Release: 2%{?dist}
+Version: 1.4.1
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -193,6 +193,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Tue Jan 05 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-1
+- Updated to 1.4.1
+- Changed %%define to %%global
+
 * Thu Oct 08 2009 Paul Wouters <paul@xelerance.com> - 1.3.4-2
 - Bump version
 
