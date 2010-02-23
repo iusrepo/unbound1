@@ -9,18 +9,15 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
-# See the unbound svn repository for further documentation on these
-#Patch1: unbound-r1657.patch
-#Patch2: unbound-r1670.patch
-#Patch3: unbound-r1677.patch
-Patch4: unbound-1.2-glob.patch
+Source4: dlv.isc.org.key
+Patch1: unbound-1.2-glob.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -34,9 +31,8 @@ Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
-Requires: ldns >= 1.5.0, dnssec-conf >= 1.19
+Requires: ldns >= 1.5.0
 Requires(pre): shadow-utils
-Requires: dnssec-conf
 
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
@@ -88,10 +84,7 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-#%patch1
-#%patch2
-#%patch3
-%patch4 -p1
+%patch1 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -119,6 +112,9 @@ for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unboun
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done 
 
+# install DLV key
+install -m 0644 %{SOURCE4} %{buildroot}%{_sysconfdir}/unbound/
+
 # remove static library from install (fedora packaging guidelines)
 rm -rf %{buildroot}%{_libdir}/*.la
 
@@ -134,6 +130,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %{_sbindir}/*
 %{_mandir}/*/*
 
@@ -167,15 +164,11 @@ exit 0
 
 %post
 /sbin/chkconfig --add %{name}
-# Check DNSSEC settings if this is a fresh install
-if [ "$1" -eq 1 ]; then
-  if [ -r /etc/sysconfig/dnssec ]; then
-    . /etc/sysconfig/dnssec
-    [ -x /usr/sbin/dnssec-configure ] && \
-      dnssec-configure -u --norestart --nocheck --dnssec="$DNSSEC" --dlv="$DLV" > \
-        /dev/null 2>&1
-  fi;
-fi
+# dnssec-conf used to contain our DLV key, but now we include it via unbound
+# If unbound had previously been configured with dnssec-configure, we need
+# to migrate the location of the DLV key file (to keep DLV enabled, and because
+# unbound won't start with a bad location for a DLV key file.
+sed -i "s:/etc/pki/dnssec-keys[/]*dlv:/etc/unbound:" %{_sysconfdir}/unbound/unbound.conf
 
 %post libs -p /sbin/ldconfig
 
@@ -193,6 +186,11 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Thu Feb 18 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-2
+- Removed dependancy for dnssec-conf
+- Added ISC DLV key (formerly in dnssec-conf)
+- Fixup old DLV locations in unbound.conf file via %%post
+
 * Tue Jan 05 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-1
 - Updated to 1.4.1
 - Changed %%define to %%global
