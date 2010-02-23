@@ -190,6 +190,7 @@ fi
 - Removed dependancy for dnssec-conf
 - Added ISC DLV key (formerly in dnssec-conf)
 - Fixup old DLV locations in unbound.conf file via %%post
+- Fix parent child disagreement handling and no-ipv6 present [svn r1953]
 
 * Tue Jan 05 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-1
 - Updated to 1.4.1
