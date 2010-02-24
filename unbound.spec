@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -94,8 +94,9 @@ Python modules and extensions for unbound
 %if %{with_python}
             --with-pythonmodule --with-pyunbound \
 %endif
-            --enable-sha2 
-%{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
+            --enable-sha2  \
+            CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE QUIET=no"
+%{__make} %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
@@ -186,6 +187,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed Feb 24 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-3
+- Change make/configure lines to attempt to fix -lphtread linking issue
+
 * Thu Feb 18 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-2
 - Removed dependancy for dnssec-conf
 - Added ISC DLV key (formerly in dnssec-conf)
