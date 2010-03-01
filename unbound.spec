@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.1
-Release: 3%{?dist}
+Release: 5%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -24,8 +24,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
 BuildRequires: libevent-devel 
 %if %{with_python}
-BuildRequires:  python-devel
+BuildRequires:  python-devel swig
 %endif
+# Required for SVN versions
+#BuildRequires: bison
+
 
 Requires(post): chkconfig
 Requires(preun): chkconfig
@@ -94,8 +97,7 @@ Python modules and extensions for unbound
 %if %{with_python}
             --with-pythonmodule --with-pyunbound \
 %endif
-            --enable-sha2  \
-            CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE QUIET=no"
+            --enable-sha2
 %{__make} %{?_smp_mflags}
 
 %install
@@ -118,6 +120,9 @@ install -m 0644 %{SOURCE4} %{buildroot}%{_sysconfdir}/unbound/
 
 # remove static library from install (fedora packaging guidelines)
 rm -rf %{buildroot}%{_libdir}/*.la
+%if %{with_python}
+rm -rf %{buildroot}%{python_sitelib}/*/*.la
+%endif
 
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
@@ -187,6 +192,10 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Mar 01 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-5
+- Overriding -D_GNU_SOURCE is no longer needed. This fixes DSO issues
+  with pthreads
+
 * Wed Feb 24 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-3
 - Change make/configure lines to attempt to fix -lphtread linking issue
 
