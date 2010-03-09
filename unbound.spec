@@ -8,8 +8,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.1
-Release: 5%{?dist}
+Version: 1.4.2
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -192,6 +192,13 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Tue Mar 09 2010 Paul Wouters <paul@xelerance.com> - 1.4.2-1
+- Updated to 1.4.2 
+- Updated unbound.conf with new options
+- Enabled pre-fetching DNSKEY records (DNSSEC speedup)
+- Enabled re-fetching popular records before they expire
+- Enabled logging of DNSSEC validation errors
+
 * Mon Mar 01 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-5
 - Overriding -D_GNU_SOURCE is no longer needed. This fixes DSO issues
   with pthreads
