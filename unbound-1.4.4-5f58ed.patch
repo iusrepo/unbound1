@@ -1,0 +1,18 @@
+commit 5f58ed252d7bcd500ebedfb351e3ce7c84c44211
+Author: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date:   Tue Apr 27 09:16:23 2010 +0000
+
+    unbound-control get_option domain-insecure works.
+
+diff --git a/util/config_file.c b/util/config_file.c
+index aca82e1..ec0866c 100644
+--- a/util/config_file.c
++++ b/util/config_file.c
+@@ -609,6 +609,7 @@ config_get_option(struct config_file* cfg, const char* opt,
+ 	else O_LST(opt, "trusted-keys-file", trusted_keys_file_list)
+ 	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
+ 	else O_LST(opt, "control-interface", control_ifs)
++	else O_LST(opt, "domain-insecure", domain_insecure)
+ 	else O_UNS(opt, "val-override-date", val_date_override)
+ 	/* not here:
+ 	 * outgoing-permit, outgoing-avoid - have list of ports

@@ -1,0 +1,77 @@
+commit 778d4ab54a4e9efb41b042607b9a685853c5483c
+Author: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date:   Fri Apr 23 14:03:09 2010 +0000
+
+           - Fix local-zone type redirect that did not use the query name for
+             the answer rrset.
+
+diff --git a/services/localzone.c b/services/localzone.c
+index dba7f3b..b8da77a 100644
+--- a/services/localzone.c
++++ b/services/localzone.c
+@@ -1040,10 +1040,10 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
+ 	if(!lr)
+ 		return 0;
+ 	if(z->type == local_zone_redirect) {
+-		/* convert rrset name to zone name; like a wildcard */
++		/* convert rrset name to query name; like a wildcard */
+ 		struct ub_packed_rrset_key r = *lr->rrset;
+-		r.rk.dname = z->name;
+-		r.rk.dname_len = z->namelen;
++		r.rk.dname = qinfo->qname;
++		r.rk.dname_len = qinfo->qname_len;
+ 		return local_encode(qinfo, edns, buf, temp, &r, 1, 
+ 			LDNS_RCODE_NOERROR);
+ 	}
+diff --git a/testdata/localdata.rpl b/testdata/localdata.rpl
+index 5bb259e..08aec6d 100644
+--- a/testdata/localdata.rpl
++++ b/testdata/localdata.rpl
+@@ -30,6 +30,10 @@ server:
+ 	; refuse zone (error)
+ 	local-zone: "refuse.top." refuse
+ 
++	; redirect zone
++	local-zone: "redirect.top." redirect
++	local-data: "redirect.top. A 20.30.40.54"
++
+ 	; create implicit data in the IN domain as well
+ 	local-data: "a.a.implicit. A 20.30.41.50"
+ 	local-data: "b.a.implicit. A 20.30.42.50"
+@@ -318,4 +322,36 @@ www.deny.top. IN A
+ ENTRY_END
+ ; no answer is checked at exit of testbound.
+ 
++; redirect zone apex
++STEP 50 QUERY
++ENTRY_BEGIN
++SECTION QUESTION
++redirect.top. IN A
++ENTRY_END
++STEP 51 CHECK_ANSWER
++ENTRY_BEGIN
++MATCH all
++REPLY QR RA AA NOERROR
++SECTION QUESTION
++redirect.top. IN A
++SECTION ANSWER
++redirect.top. IN A 20.30.40.54
++ENTRY_END
++
++; redirect zone
++STEP 52 QUERY
++ENTRY_BEGIN
++SECTION QUESTION
++www.redirect.top. IN A
++ENTRY_END
++STEP 53 CHECK_ANSWER
++ENTRY_BEGIN
++MATCH all
++REPLY QR RA AA NOERROR
++SECTION QUESTION
++www.redirect.top. IN A
++SECTION ANSWER
++www.redirect.top. IN A 20.30.40.54
++ENTRY_END
++
+ SCENARIO_END

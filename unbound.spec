@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.4
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -222,6 +222,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon May 31 2010 Paul Wouters <paul@xelerance.com> - 1.4.4-2
+- Added accidentally omitted svn patches to cvs 
+
 * Mon May 31 2010 Paul Wouters <paul@xelerance.com> - 1.4.4-1
 - Upgraded to 1.4.4 with svn patches
 - Obsolete dnssec-conf to ensure it is de-installed

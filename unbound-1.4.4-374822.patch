@@ -1,0 +1,38 @@
+commit 374822322e33503d3576c85b3e43fef158a80e42
+Author: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date:   Thu Apr 29 12:36:12 2010 +0000
+
+    dnssec lameness detection looks in key cache if dnssec is expected.
+
+diff --git a/iterator/iter_utils.c b/iterator/iter_utils.c
+index 6124650..f63b6fe 100644
+--- a/iterator/iter_utils.c
++++ b/iterator/iter_utils.c
+@@ -60,6 +60,8 @@
+ #include "util/random.h"
+ #include "util/fptr_wlist.h"
+ #include "validator/val_anchor.h"
++#include "validator/val_kcache.h"
++#include "validator/val_kentry.h"
+ 
+ /** time when nameserver glue is said to be 'recent' */
+ #define SUSPICION_RECENT_EXPIRY 86400
+@@ -570,6 +572,18 @@ iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
+ 		reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
+ 		LDNS_RR_TYPE_DS, dclass))
+ 		return 1;
++	/* look in key cache */
++	if(env->key_cache) {
++		struct key_entry_key* kk = key_cache_obtain(env->key_cache,
++			dp->name, dp->namelen, dclass, env->scratch, *env->now);
++		if(kk) {
++			if(key_entry_isgood(kk) || key_entry_isbad(kk)) {
++				regional_free_all(env->scratch);
++				return 1;
++			}
++			regional_free_all(env->scratch);
++		}
++	}
+ 	return 0;
+ }
+ 

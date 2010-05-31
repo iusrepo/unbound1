@@ -1,0 +1,62 @@
+commit a6f07ba49319bbb62772a99cc3267fe8409a39d4
+Author: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date:   Fri Apr 23 06:48:49 2010 +0000
+
+           - Squelch log message: sendto failed permission denied for
+             255.255.255.255, it is visible in VERB_DETAIL (verbosity 2).
+
+diff --git a/util/net_help.c b/util/net_help.c
+index 182f39d..7b2a3f4 100644
+--- a/util/net_help.c
++++ b/util/net_help.c
+@@ -494,6 +494,14 @@ addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen)
+ 	return (memcmp(s, map_prefix, 12) == 0);
+ }
+ 
++int addr_is_broadcast(struct sockaddr_storage* addr, socklen_t addrlen)
++{
++	int af = (int)((struct sockaddr_in*)addr)->sin_family;
++	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
++	return af == AF_INET && addrlen>=(socklen_t)sizeof(struct sockaddr_in)
++		&& memcmp(sinaddr, "\377\377\377\377", 4) == 0;
++}
++
+ void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
+ 	socklen_t len, struct regional* region)
+ {
+diff --git a/util/net_help.h b/util/net_help.h
+index 9ac96eb..8afa84b 100644
+--- a/util/net_help.h
++++ b/util/net_help.h
+@@ -280,6 +280,14 @@ void addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
+ int addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen);
+ 
+ /**
++ * See if sockaddr is 255.255.255.255.
++ * @param addr: address
++ * @param addrlen: length of address
++ * @return true if so
++ */
++int addr_is_broadcast(struct sockaddr_storage* addr, socklen_t addrlen);
++
++/**
+  * Insert new socket list item. If fails logs error.
+  * @param list: pointer to pointer to first item.
+  * @param addr: address or NULL if 'cache'.
+diff --git a/util/netevent.c b/util/netevent.c
+index 4b6a0a3..3f3c6ce 100644
+--- a/util/netevent.c
++++ b/util/netevent.c
+@@ -301,6 +301,12 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
+ 			(struct sockaddr_storage*)addr, addrlen) &&
+ 			verbosity < VERB_DETAIL)
+ 			return 0;
++		/* SO_BROADCAST sockopt can give access to 255.255.255.255,
++		 * but a dns cache does not need it. */
++		if(errno == EACCES && addr_is_broadcast(
++			(struct sockaddr_storage*)addr, addrlen) &&
++			verbosity < VERB_DETAIL)
++			return 0;
+ #ifndef USE_WINSOCK
+ 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
+ #else

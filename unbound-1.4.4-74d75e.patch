@@ -1,0 +1,26 @@
+commit 74d75e591a6f5343109922f2bf1f83eba59f0a4f
+Author: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date:   Thu Apr 29 12:52:44 2010 +0000
+
+    fix for key cache lookup
+
+diff --git a/iterator/iter_utils.c b/iterator/iter_utils.c
+index f63b6fe..b3a31fa 100644
+--- a/iterator/iter_utils.c
++++ b/iterator/iter_utils.c
+@@ -577,9 +577,14 @@ iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
+ 		struct key_entry_key* kk = key_cache_obtain(env->key_cache,
+ 			dp->name, dp->namelen, dclass, env->scratch, *env->now);
+ 		if(kk) {
+-			if(key_entry_isgood(kk) || key_entry_isbad(kk)) {
++			if(query_dname_compare(kk->name, dp->name) == 0) {
++			  if(key_entry_isgood(kk) || key_entry_isbad(kk)) {
+ 				regional_free_all(env->scratch);
+ 				return 1;
++			  } else if(key_entry_isnull(kk)) {
++				regional_free_all(env->scratch);
++				return 0;
++			  }
+ 			}
+ 			regional_free_all(env->scratch);
+ 		}
