@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.5
-Release: 3%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -195,10 +195,6 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
-* Tue Oct 26 2010 Paul Wouters <paul@xelerance.com> - 1.4.5-3
-- Disable do-ipv6 per default - causes severe degradation on non-ipv6 machines
-  (see comments in inbound.conf)
-
 * Tue Jun 15 2010 Paul Wouters <paul@xelerance.com> - 1.4.5-2
 - Bump release - forgot to upload the new tar ball.
 
