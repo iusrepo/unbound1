@@ -1,5 +1,5 @@
 # not ready yet
-%{?!with_python:      %global with_python      0}
+%{?!with_python:      %global with_python      1}
 
 %if %{with_python}
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
@@ -8,21 +8,23 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.5
-Release: 4%{?dist}
+Version: 1.4.8
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
-Source4: dlv.isc.org.key
+Source4: unbound_munin_
+Source5: root.key
+Source6: dlv.isc.org.key
 Patch1: unbound-1.2-glob.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
-BuildRequires: libevent-devel 
+BuildRequires: libevent-devel expat-devel
 %if %{with_python}
 BuildRequires:  python-devel swig
 %endif
@@ -100,7 +102,7 @@ Python modules and extensions for unbound
 %if %{with_python}
             --with-pythonmodule --with-pyunbound \
 %endif
-            --enable-sha2
+            --enable-sha2 --disable-gost
 %{__make} %{?_smp_mflags}
 
 %install
@@ -113,18 +115,18 @@ install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
 install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
-install -m 0755 contrib/unbound_munin_ %{buildroot}%{_datadir}/munin/plugins/unbound
+install -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done 
 
-# install DLV key
-install -m 0644 %{SOURCE4} %{buildroot}%{_sysconfdir}/unbound/
+# install root and DLV key
+install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
 
 # remove static library from install (fedora packaging guidelines)
-rm -rf %{buildroot}%{_libdir}/*.la
+rm %{buildroot}%{_libdir}/*.la
 %if %{with_python}
-rm -rf %{buildroot}%{python_sitelib}/*/*.la
+rm %{buildroot}%{python_sitelib}/*.la
 %endif
 
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
@@ -140,6 +142,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %{_sbindir}/*
 %{_mandir}/*/*
 
@@ -195,6 +198,13 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Tue Jan 25 2011 Paul Wouters <paul@xelerance.com> - 1.4.8-1
+- Updated to 1.4.8
+- Enable root key for DNSSEC
+- Fix unbound-munin to use proper file (could cause excessive logging)
+- Build unbound-python per default
+- Disable gost as Fedora/EPEL does not allow ECC and has mangled openssl
+
 * Tue Oct 26 2010 Paul Wouters <paul@xelerance.com> - 1.4.5-4
 - Revert last build - it was on the wrong branch
 
