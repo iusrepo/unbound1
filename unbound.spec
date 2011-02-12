@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.8
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -198,6 +198,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sat Feb 12 2011 Paul Wouters <paul@xelerance.com> - 1.4.8-2
+- rebuilt
+
 * Tue Jan 25 2011 Paul Wouters <paul@xelerance.com> - 1.4.8-1
 - Updated to 1.4.8
 - Enable root key for DNSSEC
