@@ -148,6 +148,7 @@ rm -rf ${RPM_BUILD_ROOT}
 
 %if %{with_python}
 %files python
+%defattr(-,root,root,-)
 %{python_sitelib}/*
 %endif
 
