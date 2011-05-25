@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.9
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -20,6 +20,7 @@ Source4: unbound_munin_
 Source5: root.key
 Source6: dlv.isc.org.key
 Patch1: unbound-1.2-glob.patch
+Patch2: unbound-CVE-2011-1922.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -93,6 +94,7 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
+%patch2 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -199,6 +201,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Wed May 25 2011 Paul Wouters <paul@xelerance.com> - 1.4.9-2
+- Applied patch for CVE-2011-1922 DoS vulnerability
+
 * Sun Mar 27 2011 Paul Wouters <paul@xelerance.com> - 1.4.9-1
 - Updated to 1.4.9
 
