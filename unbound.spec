@@ -8,7 +8,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.9
+Version: 1.4.10
 Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
@@ -141,7 +141,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %attr(0755,root,root) %{_initrddir}/%{name}
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
-%attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
+%ghost %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
@@ -201,6 +201,12 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Jun 06 2011 Paul Wouters <paul@xelerance.com> - 1.4.10-1
+- Added ghost for /var/run/unbound (bz#656710)
+
+* Mon Jun 06 2011 Paul Wouters <paul@xelerance.com> - 1.4.9-3
+- rebuilt
+
 * Wed May 25 2011 Paul Wouters <paul@xelerance.com> - 1.4.9-2
 - Applied patch for CVE-2011-1922 DoS vulnerability
 
