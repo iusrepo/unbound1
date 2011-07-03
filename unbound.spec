@@ -8,8 +8,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.10
-Release: 2%{?dist}
+Version: 1.4.11
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -20,7 +20,6 @@ Source4: unbound_munin_
 Source5: root.key
 Source6: dlv.isc.org.key
 Patch1: unbound-1.2-glob.patch
-Patch2: unbound-CVE-2011-1922.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -30,7 +29,7 @@ BuildRequires: libevent-devel expat-devel
 BuildRequires:  python-devel swig
 %endif
 # Required for SVN versions
-#BuildRequires: bison
+BuildRequires: bison
 
 
 Requires(post): chkconfig
@@ -94,11 +93,10 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
-%patch2 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
-            --disable-rpath --enable-debug --disable-static \
+            --disable-rpath --enable-XXXdebug --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \
 %if %{with_python}
@@ -201,6 +199,11 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sun Jul 03 2011 Paul Wouters <paul@xelerance.com> - 1.4.11-1
+- Updated to 1.4.11
+- removed integrated CVE patch
+- updated stock unbound.conf for new options introduced
+
 * Mon Jun 06 2011 Paul Wouters <paul@xelerance.com> - 1.4.10-1
 - Added ghost for /var/run/unbound (bz#656710)
 
