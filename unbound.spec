@@ -8,7 +8,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.11
+Version: 1.4.12
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
@@ -199,6 +199,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Jul 18 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-1
+- Updated to 1.4.12
+
 * Sun Jul 03 2011 Paul Wouters <paul@xelerance.com> - 1.4.11-1
 - Updated to 1.4.11
 - removed integrated CVE patch
