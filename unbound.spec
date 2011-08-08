@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.12
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -20,6 +20,7 @@ Source4: unbound_munin_
 Source5: root.key
 Source6: dlv.isc.org.key
 Patch1: unbound-1.2-glob.patch
+Patch2: unbound-1.4.12-pythonmod.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -93,10 +94,11 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
+%patch2 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
-            --disable-rpath --enable-XXXdebug --disable-static \
+            --disable-rpath --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \
 %if %{with_python}
@@ -199,6 +201,11 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Aug 08 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-2
+- Fix for python module load in the server (Tom Hendrikx)
+- No longer enable --enable-debug as it causes degraded  performance
+  under load.
+
 * Mon Jul 18 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-1
 - Updated to 1.4.12
 
