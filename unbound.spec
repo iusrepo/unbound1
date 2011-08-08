@@ -152,6 +152,8 @@ rm -rf ${RPM_BUILD_ROOT}
 %files python
 %defattr(-,root,root,-)
 %{python_sitelib}/*
+%doc libunbound/python/examples/*
+%doc pythonmod/examples/*
 %endif
 
 %files munin
@@ -201,6 +203,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Mon Aug 08 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-3
+- Added pythonmod docs and examples
+
 * Mon Aug 08 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-2
 - Fix for python module load in the server (Tom Hendrikx)
 - No longer enable --enable-debug as it causes degraded  performance
