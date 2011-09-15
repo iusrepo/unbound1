@@ -1,0 +1,109 @@
+Index: services/outside_network.c
+===================================================================
+--- services/outside_network.c	(revision 2491)
++++ services/outside_network.c	(revision 2493)
+@@ -1199,6 +1199,7 @@
+ 		if(sq->status == serviced_query_UDP_EDNS ||
+ 			sq->status == serviced_query_UDP ||
+ 			sq->status == serviced_query_PROBE_EDNS ||
++			sq->status == serviced_query_UDP_EDNS_FRAG ||
+ 			sq->status == serviced_query_UDP_EDNS_fallback) {
+ 			struct pending* p = (struct pending*)sq->pending;
+ 			if(p->pc)
+@@ -1280,7 +1281,19 @@
+ 		edns.edns_present = 1;
+ 		edns.ext_rcode = 0;
+ 		edns.edns_version = EDNS_ADVERTISED_VERSION;
+-		edns.udp_size = EDNS_ADVERTISED_SIZE;
++		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
++			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
++				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
++					edns.udp_size = EDNS_FRAG_SIZE_IP6;
++				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
++			} else {
++				if(EDNS_FRAG_SIZE_IP4 < EDNS_ADVERTISED_SIZE)
++					edns.udp_size = EDNS_FRAG_SIZE_IP4;
++				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
++			}
++		} else {
++			edns.udp_size = EDNS_ADVERTISED_SIZE;
++		}
+ 		edns.bits = 0;
+ 		if(sq->dnssec & EDNS_DO)
+ 			edns.bits = EDNS_DO;
+@@ -1324,7 +1337,8 @@
+ 			sq->status = serviced_query_UDP; 
+ 		}
+ 	}
+-	serviced_encode(sq, buff, sq->status == serviced_query_UDP_EDNS);
++	serviced_encode(sq, buff, (sq->status == serviced_query_UDP_EDNS) ||
++		(sq->status == serviced_query_UDP_EDNS_FRAG));
+ 	sq->last_sent_time = *sq->outnet->now_tv;
+ 	sq->edns_lame_known = (int)edns_lame_known;
+ 	verbose(VERB_ALGO, "serviced query UDP timeout=%d msec", rtt);
+@@ -1564,6 +1578,20 @@
+ 			 * by EDNS. */
+ 			sq->status = serviced_query_UDP_EDNS;
+ 		}
++		if(sq->status == serviced_query_UDP_EDNS) {
++			/* fallback to 1480/1280 */
++			sq->status = serviced_query_UDP_EDNS_FRAG;
++			log_name_addr(VERB_ALGO, "try edns1xx0", sq->qbuf+10,
++				&sq->addr, sq->addrlen);
++			if(!serviced_udp_send(sq, c->buffer)) {
++				serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
++			}
++			return 0;
++		}
++		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
++			/* fragmentation size did not fix it */
++			sq->status = serviced_query_UDP_EDNS;
++		}
+ 		sq->retry++;
+ 		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
+ 			-1, sq->last_rtt, (uint32_t)now.tv_sec)))
+@@ -1589,7 +1617,8 @@
+ 		return 0;
+ 	}
+ 	if(!fallback_tcp) {
+-	    if(sq->status == serviced_query_UDP_EDNS 
++	    if( (sq->status == serviced_query_UDP_EDNS 
++	        ||sq->status == serviced_query_UDP_EDNS_FRAG)
+ 		&& (LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
+ 			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
+ 			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
+@@ -1866,6 +1895,7 @@
+ 	if(sq->status == serviced_query_UDP_EDNS ||
+ 		sq->status == serviced_query_UDP ||
+ 		sq->status == serviced_query_PROBE_EDNS ||
++		sq->status == serviced_query_UDP_EDNS_FRAG ||
+ 		sq->status == serviced_query_UDP_EDNS_fallback) {
+ 		s += sizeof(struct pending);
+ 		s += comm_timer_get_mem(NULL);
+Index: services/outside_network.h
+===================================================================
+--- services/outside_network.h	(revision 2491)
++++ services/outside_network.h	(revision 2493)
+@@ -274,6 +274,11 @@
+ 	void* cb_arg;
+ };
+ 
++/** fallback size for fragmentation for EDNS in IPv4 */
++#define EDNS_FRAG_SIZE_IP4 1480
++/** fallback size for EDNS in IPv6, fits one fragment with ip6-tunnel-ids */
++#define EDNS_FRAG_SIZE_IP6 1260
++
+ /**
+  * Query service record.
+  * Contains query and destination. UDP, TCP, EDNS are all tried.
+@@ -314,7 +319,9 @@
+ 		/** probe to test noEDNS0 (EDNS gives FORMERRorNOTIMP) */
+ 		serviced_query_UDP_EDNS_fallback,
+ 		/** probe to test TCP noEDNS0 (EDNS gives FORMERRorNOTIMP) */
+-		serviced_query_TCP_EDNS_fallback
++		serviced_query_TCP_EDNS_fallback,
++		/** send UDP query with EDNS1480 (or 1280) */
++		serviced_query_UDP_EDNS_FRAG
+ 	} 	
+ 		/** variable with current status */ 
+ 		status;
