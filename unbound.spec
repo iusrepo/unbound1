@@ -133,7 +133,7 @@ install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
 # remove static library from install (fedora packaging guidelines)
 rm %{buildroot}%{_libdir}/*.la
 %if %{with_python}
-rm %{buildroot}%{python_sitelib}/*.la
+rm %{buildroot}%{python_archlib}/*.la
 %endif
 
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
@@ -153,7 +153,7 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
 %if %{with_python}
 %files python
-%{python_sitelib}/*
+%{python_archlib}/*
 %doc libunbound/python/examples/*
 %doc pythonmod/examples/*
 %endif
@@ -226,6 +226,7 @@ fi
 - Upgraded to 1.4.13
 - Removed merged in pythonmod patch
 - Added EDNS1480 patch to fix unbound on broken EDNS/UDP networks
+- Fix python to go into archlib instead of sitelib
 
 * Wed Sep 14 2011 Tom Callaway <spot@fedoraproject.org> - 1.4.12-4
 - convert to systemd, tmpfiles.d
