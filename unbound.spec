@@ -8,8 +8,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.12
-Release: 3%{?dist}
+Version: 1.4.13
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -20,7 +20,7 @@ Source4: unbound_munin_
 Source5: root.key
 Source6: dlv.isc.org.key
 Patch1: unbound-1.2-glob.patch
-Patch2: unbound-1.4.12-pythonmod.patch
+Patch2: unbound-1.4.13-edns1480.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -203,6 +203,11 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Thu Sep 15 2011 Paul Wouters <paul@xelerance.com> - 1.4.13-1
+- Upgraded to 1.4.13
+- Removed merged in pythonmod patch
+- Added EDNS1480 patch to fix unbound on broken EDNS/UDP networks
+
 * Mon Aug 08 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-3
 - Added pythonmod docs and examples
 
