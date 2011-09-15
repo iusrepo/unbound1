@@ -13,17 +13,18 @@ Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
-Source1: unbound.init
+Source1: unbound.service
 Source2: unbound.conf
 Source3: unbound.munin
 Source4: unbound_munin_
 Source5: root.key
 Source6: dlv.isc.org.key
+Source7: unbound-keygen.service
+Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
 Patch2: unbound-1.4.13-edns1480.patch
 
 Group: System Environment/Daemons
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
 BuildRequires: libevent-devel expat-devel
 %if %{with_python}
@@ -31,12 +32,12 @@ BuildRequires:  python-devel swig
 %endif
 # Required for SVN versions
 BuildRequires: bison
+BuildRequires: systemd-units
 
-
-Requires(post): chkconfig
-Requires(preun): chkconfig
-Requires(preun): initscripts
-Requires(postun): initscripts
+Requires(post): systemd-sysv
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
 Requires: ldns >= 1.5.0
 Requires(pre): shadow-utils
 
@@ -108,10 +109,10 @@ Python modules and extensions for unbound
 %{__make} %{?_smp_mflags}
 
 %install
-rm -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
-install -d 0755 %{buildroot}%{_initrddir}
-install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
+install -d 0755 %{buildroot}%{_unitdir}
+install -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
+install -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 # Install munin plugin and its softlinks
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
@@ -121,6 +122,10 @@ install -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done 
+
+# Install tmpfiles.d config
+mkdir -p %{buildroot}%{_sysconfdir}/tmpfiles.d/
+install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
 
 # install root and DLV key
 install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
@@ -133,15 +138,13 @@ rm %{buildroot}%{python_sitelib}/*.la
 
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
-%clean
-rm -rf ${RPM_BUILD_ROOT}
-
 %files 
-%defattr(-,root,root,-)
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
-%attr(0755,root,root) %{_initrddir}/%{name}
+%{_unitdir}/%{name}.service
+%{_unitdir}/%{name}-keygen.service
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %ghost %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
+%config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
@@ -150,25 +153,21 @@ rm -rf ${RPM_BUILD_ROOT}
 
 %if %{with_python}
 %files python
-%defattr(-,root,root,-)
 %{python_sitelib}/*
 %doc libunbound/python/examples/*
 %doc pythonmod/examples/*
 %endif
 
 %files munin
-%defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
 %{_datadir}/munin/plugins/unbound*
 
 %files devel
-%defattr(-,root,root,-)
 %{_libdir}/libunbound.so
 %{_includedir}/unbound.h
 %doc README
 
 %files libs
-%defattr(-,root,root,-)
 %{_libdir}/libunbound.so.*
 %doc doc/README doc/LICENSE
 
@@ -180,7 +179,10 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 exit 0
 
 %post
-/sbin/chkconfig --add %{name}
+if [ $1 -eq 1 ] ; then 
+    # Initial installation 
+    /bin/systemctl daemon-reload >/dev/null 2>&1 || :
+fi
 # dnssec-conf used to contain our DLV key, but now we include it via unbound
 # If unbound had previously been configured with dnssec-configure, we need
 # to migrate the location of the DLV key file (to keep DLV enabled, and because
@@ -190,23 +192,43 @@ sed -i "s:/etc/pki/dnssec-keys[/]*dlv:/etc/unbound:" %{_sysconfdir}/unbound/unbo
 %post libs -p /sbin/ldconfig
 
 %preun
-if [ "$1" -eq 0 ]; then
-        /sbin/service %{name} stop >/dev/null 2>&1
-        /sbin/chkconfig --del %{name} 
+if [ $1 -eq 0 ]; then
+	# Package removal, not upgrade
+	/bin/systemctl --no-reload disable unbound.service > /dev/null 2>&1 || :
+	/bin/systemctl stop unbound.service > /dev/null 2>&1 || :
+	/bin/systemctl --no-reload disable unbound-keygen.service > /dev/null 2>&1 || :
+	/bin/systemctl stop unbound-keygen.service > /dev/null 2>&1 || :
 fi
 
 %postun 
-if [ "$1" -ge "1" ]; then
-  /sbin/service %{name} condrestart >/dev/null 2>&1 || :
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+    # Package upgrade, not uninstall
+    /bin/systemctl try-restart unbound.service >/dev/null 2>&1 || :
+    /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 fi
 
 %postun libs -p /sbin/ldconfig
+
+%triggerun -- unbound < 1.4.12-4
+# Save the current service runlevel info
+# User must manually run systemd-sysv-convert --apply unbound
+# to migrate them to systemd targets
+/usr/bin/systemd-sysv-convert --save unbound >/dev/null 2>&1 ||:
+
+# Run these because the SysV package being removed won't do them
+/sbin/chkconfig --del unbound >/dev/null 2>&1 || :
+/bin/systemctl try-restart unbound.service >/dev/null 2>&1 || :
+/bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
 * Thu Sep 15 2011 Paul Wouters <paul@xelerance.com> - 1.4.13-1
 - Upgraded to 1.4.13
 - Removed merged in pythonmod patch
 - Added EDNS1480 patch to fix unbound on broken EDNS/UDP networks
+
+* Wed Sep 14 2011 Tom Callaway <spot@fedoraproject.org> - 1.4.12-4
+- convert to systemd, tmpfiles.d
 
 * Mon Aug 08 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-3
 - Added pythonmod docs and examples
