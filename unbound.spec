@@ -22,7 +22,6 @@ Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
-Patch2: unbound-1.4.13-edns1480.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
@@ -95,7 +94,6 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
-%patch2 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -222,10 +220,13 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon Dec 19 2011 Paul Wouters <paul@xelerance.com> - 1.4.13-2
+* Mon Dec 19 2011 Paul Wouters <paul@cypherpunks.ca> - 1.4.14-1
 - Upgraded to 1.4.14 for CVE-2011-4528 / VU#209659
 - SSL-wrapped query support for dnssec-trigger
 - EDNS handling changes
+- Removed integrated EDNS patches
+- Disabled use-caps-for-id, GoDaddy domains now break on it
+- Enabled new harden-below-nxdomain
 
 * Thu Sep 15 2011 Paul Wouters <paul@xelerance.com> - 1.4.13-1
 - Upgraded to 1.4.13
