@@ -8,7 +8,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.13
+Version: 1.4.14
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
@@ -222,6 +222,11 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Dec 19 2011 Paul Wouters <paul@xelerance.com> - 1.4.13-2
+- Upgraded to 1.4.14 for CVE-2011-4528 / VU#209659
+- SSL-wrapped query support for dnssec-trigger
+- EDNS handling changes
+
 * Thu Sep 15 2011 Paul Wouters <paul@xelerance.com> - 1.4.13-1
 - Upgraded to 1.4.13
 - Removed merged in pythonmod patch
