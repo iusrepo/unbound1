@@ -9,7 +9,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.14
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -220,6 +220,9 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Sat Jan 14 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4.14-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+
 * Mon Dec 19 2011 Paul Wouters <paul@cypherpunks.ca> - 1.4.14-1
 - Upgraded to 1.4.14 for CVE-2011-4528 / VU#209659
 - SSL-wrapped query support for dnssec-trigger
