@@ -1,4 +1,3 @@
-# not ready yet
 %{?!with_python:      %global with_python      1}
 
 %if %{with_python}
@@ -8,8 +7,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.14
-Release: 2%{?dist}
+Version: 1.4.15
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -191,11 +190,11 @@ sed -i "s:/etc/pki/dnssec-keys[/]*dlv:/etc/unbound:" %{_sysconfdir}/unbound/unbo
 
 %preun
 if [ $1 -eq 0 ]; then
-	# Package removal, not upgrade
-	/bin/systemctl --no-reload disable unbound.service > /dev/null 2>&1 || :
-	/bin/systemctl stop unbound.service > /dev/null 2>&1 || :
-	/bin/systemctl --no-reload disable unbound-keygen.service > /dev/null 2>&1 || :
-	/bin/systemctl stop unbound-keygen.service > /dev/null 2>&1 || :
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable unbound.service > /dev/null 2>&1 || :
+    /bin/systemctl stop unbound.service > /dev/null 2>&1 || :
+    /bin/systemctl --no-reload disable unbound-keygen.service > /dev/null 2>&1 || :
+    /bin/systemctl stop unbound-keygen.service > /dev/null 2>&1 || :
 fi
 
 %postun 
@@ -220,6 +219,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jan 27 2012 Paul Wouters <pwouters@redhat.com> - 1.4.15-1
+- Upgraded to 1.4.15
+- Updated unbound.conf to show how to configure listening on tls443
+
 * Sat Jan 14 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4.14-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
 
