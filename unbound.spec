@@ -7,8 +7,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.15
-Release: 2%{?dist}
+Version: 1.4.16
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -21,7 +21,6 @@ Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
-Patch2: unbound-1.4.15-version.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
@@ -94,7 +93,6 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
-%patch2 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -221,6 +219,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Feb 02 2012 Paul Wouters <paul@nohats.ca> - 1.4.16-1
+- Upgraded to 1.4.16, which was relesed due to the soname
+  and some DNSSEC validation failures
+
 * Wed Feb 01 2012 Paul Wouters <paul@nohats.ca> - 1.4.15-2
 - Patch for SONAME version (libtool's -version-number vs -version-info)
 
