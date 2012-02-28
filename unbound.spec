@@ -8,7 +8,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.16
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -21,6 +21,7 @@ Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
+Patch2: unbound-trunk.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
@@ -93,6 +94,7 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
+%patch2 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -140,7 +142,7 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-keygen.service
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
-%ghost %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
+%attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
@@ -219,6 +221,11 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Feb 27 2012 Paul Wouters <pwouters@redhat.com> - 1.4.16-2
+- Don't ghost the directory (rhbz#788805)
+- Patch for unbound to support unbound-control forward_zone
+  (needed for openswan in XAUTH mode)
+
 * Thu Feb 02 2012 Paul Wouters <paul@nohats.ca> - 1.4.16-1
 - Upgraded to 1.4.16, which was relesed due to the soname
   and some DNSSEC validation failures
