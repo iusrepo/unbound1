@@ -7,8 +7,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.16
-Release: 2%{?dist}
+Version: 1.4.17
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -39,6 +39,8 @@ Requires(preun): systemd-units
 Requires(postun): systemd-units
 Requires: ldns >= 1.5.0
 Requires(pre): shadow-utils
+# Needed because /usr/sbin/unbound links unbound libs staticly
+Requires: %{name}-libs = %{version}-%{release}
 
 Obsoletes:      dnssec-conf < 1.27-2
 Provides:       dnssec-conf = 1.27-1
@@ -221,6 +223,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 28 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-1 UNRELEASED
+- Since the daemon links to the libs staticly, add Requires
+  (this is rhbz#745288)
+
 * Mon Feb 27 2012 Paul Wouters <pwouters@redhat.com> - 1.4.16-2
 - Don't ghost the directory (rhbz#788805)
 - Patch for unbound to support unbound-control forward_zone
