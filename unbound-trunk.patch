@@ -1,0 +1,3316 @@
+diff -Naur unbound-1.4.16/compat/memcmp.h unbound-trunk/compat/memcmp.h
+--- unbound-1.4.16/compat/memcmp.h	1969-12-31 19:00:00.000000000 -0500
++++ unbound-trunk/compat/memcmp.h	2012-02-22 20:37:14.182368184 -0500
+@@ -0,0 +1,16 @@
++/*
++ *	memcmp.h: undef memcmp for compat.
++ *
++ *	Copyright (c) 2012, NLnet Labs. All rights reserved.
++ *
++ * See LICENSE for the license.
++*/
++#ifndef COMPAT_MEMCMP_H
++#define COMPAT_MEMCMP_H
++
++#ifdef memcmp
++/* undef here otherwise autoheader messes it up in config.h */
++#  undef memcmp
++#endif
++
++#endif /* COMPAT_MEMCMP_H */
+diff -Naur unbound-1.4.16/daemon/cachedump.c unbound-trunk/daemon/cachedump.c
+--- unbound-1.4.16/daemon/cachedump.c	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/daemon/cachedump.c	2012-02-22 20:37:15.803368186 -0500
+@@ -765,7 +765,7 @@
+ 	if(!go_on) 
+ 		return 1; /* skip this one, not all references satisfied */
+ 
+-	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, NULL)) {
++	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, 0, NULL)) {
+ 		log_warn("error out of memory");
+ 		return 0;
+ 	}
+@@ -802,7 +802,8 @@
+ {
+ 	char buf[257];
+ 	struct delegpt_addr* a;
+-	int lame, dlame, rlame, rto, edns_vs, to, delay, entry_ttl;
++	int lame, dlame, rlame, rto, edns_vs, to, delay, entry_ttl,
++		tA = 0, tAAAA = 0, tother = 0;
+ 	struct rtt_info ri;
+ 	uint8_t edns_lame_known;
+ 	for(a = dp->target_list; a; a = a->next_target) {
+@@ -817,9 +818,11 @@
+ 		delay=0;
+ 		entry_ttl = infra_get_host_rto(worker->env.infra_cache,
+ 			&a->addr, a->addrlen, dp->name, dp->namelen,
+-			&ri, &delay, *worker->env.now);
++			&ri, &delay, *worker->env.now, &tA, &tAAAA, &tother);
+ 		if(entry_ttl == -2 && ri.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
+-			if(!ssl_printf(ssl, "expired, rto %d msec.\n", ri.rto))
++			if(!ssl_printf(ssl, "expired, rto %d msec, tA %d "
++				"tAAAA %d tother %d.\n", ri.rto, tA, tAAAA,
++				tother))
+ 				return;
+ 			continue;
+ 		}
+@@ -840,11 +843,12 @@
+ 			continue; /* skip stuff not in infra cache */
+ 		}
+ 		if(!ssl_printf(ssl, "%s%s%s%srto %d msec, ttl %d, ping %d "
+-			"var %d rtt %d",
++			"var %d rtt %d, tA %d, tAAAA %d, tother %d",
+ 			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
+ 			a->lame?"AddrWasParentSide ":"",
+ 			rlame?"NoAuthButRecursive ":"", rto, entry_ttl,
+-			ri.srtt, ri.rttvar, rtt_notimeout(&ri)))
++			ri.srtt, ri.rttvar, rtt_notimeout(&ri),
++			tA, tAAAA, tother))
+ 			return;
+ 		if(delay)
+ 			if(!ssl_printf(ssl, ", probedelay %d", delay))
+@@ -907,19 +911,12 @@
+ 	char b[260];
+ 	struct query_info qinfo;
+ 	struct iter_hints_stub* stub;
+-	struct iter_env* ie;
+ 	regional_free_all(region);
+ 	qinfo.qname = nm;
+ 	qinfo.qname_len = nmlen;
+ 	qinfo.qtype = LDNS_RR_TYPE_A;
+ 	qinfo.qclass = LDNS_RR_CLASS_IN;
+ 
+-	if(modstack_find(&worker->daemon->mods, "iterator") == -1) {
+-		return ssl_printf(ssl, "error: no iterator module\n");
+-	}
+-	ie = (struct iter_env*)worker->env.modinfo[modstack_find(&worker->
+-		daemon->mods, "iterator")];
+-
+ 	dname_str(nm, b);
+ 	if(!ssl_printf(ssl, "The following name servers are used for lookup "
+ 		"of %s\n", b)) 
+@@ -964,7 +961,8 @@
+ 				continue;
+ 			}
+ 		} 
+-		stub = hints_lookup_stub(ie->hints, nm, qinfo.qclass, dp);
++		stub = hints_lookup_stub(worker->env.hints, nm, qinfo.qclass,
++			dp);
+ 		if(stub) {
+ 			if(stub->noprime) {
+ 				if(!ssl_printf(ssl, "The noprime stub servers "
+diff -Naur unbound-1.4.16/daemon/remote.c unbound-trunk/daemon/remote.c
+--- unbound-1.4.16/daemon/remote.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/daemon/remote.c	2012-02-22 20:37:15.804368186 -0500
+@@ -68,6 +68,7 @@
+ #include "validator/validator.h"
+ #include "validator/val_kcache.h"
+ #include "validator/val_kentry.h"
++#include "validator/val_anchor.h"
+ #include "iterator/iterator.h"
+ #include "iterator/iter_fwd.h"
+ #include "iterator/iter_hints.h"
+@@ -1337,15 +1338,15 @@
+ 
+ /** parse args into delegpt */
+ static struct delegpt*
+-parse_delegpt(SSL* ssl, struct regional* region, char* args, uint8_t* root)
++parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
+ {
+ 	/* parse args and add in */
+ 	char* p = args;
+ 	char* todo;
+-	struct delegpt* dp = delegpt_create(region);
++	struct delegpt* dp = delegpt_create_mlc(nm);
+ 	struct sockaddr_storage addr;
+ 	socklen_t addrlen;
+-	if(!dp || !delegpt_set_name(dp, region, root)) {
++	if(!dp) {
+ 		(void)ssl_printf(ssl, "error out of memory\n");
+ 		return NULL;
+ 	}
+@@ -1358,14 +1359,37 @@
+ 		}
+ 		/* parse address */
+ 		if(!extstrtoaddr(todo, &addr, &addrlen)) {
+-			(void)ssl_printf(ssl, "error cannot parse"
+-				" IP address '%s'\n", todo);
+-			return NULL;
+-		}
+-		/* add address */
+-		if(!delegpt_add_addr(dp, region, &addr, addrlen, 0, 0)) {
+-			(void)ssl_printf(ssl, "error out of memory\n");
+-			return NULL;
++			if(allow_names) {
++				uint8_t* n = NULL;
++				size_t ln;
++				int lb;
++				if(!parse_arg_name(ssl, todo, &n, &ln, &lb)) {
++					(void)ssl_printf(ssl, "error cannot "
++						"parse IP address or name "
++						"'%s'\n", todo);
++					delegpt_free_mlc(dp);
++					return NULL;
++				}
++				if(!delegpt_add_ns_mlc(dp, n, 0)) {
++					(void)ssl_printf(ssl, "error out of memory\n");
++					delegpt_free_mlc(dp);
++					return NULL;
++				}
++				free(n);
++
++			} else {
++				(void)ssl_printf(ssl, "error cannot parse"
++					" IP address '%s'\n", todo);
++				delegpt_free_mlc(dp);
++				return NULL;
++			}
++		} else {
++			/* add address */
++			if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
++				(void)ssl_printf(ssl, "error out of memory\n");
++				delegpt_free_mlc(dp);
++				return NULL;
++			}
+ 		}
+ 	}
+ 	return dp;
+@@ -1389,20 +1413,166 @@
+ 	 * the actual mesh is not running, so we can freely edit it. */
+ 	/* delete all the existing queries first */
+ 	mesh_delete_all(worker->env.mesh);
+-	/* reset the fwd structure ; the cfg is unchanged (shared by threads)*/
+-	/* this reset frees up memory */
+-	forwards_apply_cfg(fwd, worker->env.cfg);
+ 	if(strcmp(args, "off") == 0) {
+ 		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
+ 	} else {
+ 		struct delegpt* dp;
+-		if(!(dp = parse_delegpt(ssl, fwd->region, args, root)))
++		if(!(dp = parse_delegpt(ssl, args, root, 0)))
+ 			return;
+ 		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+ 			(void)ssl_printf(ssl, "error out of memory\n");
++			delegpt_free_mlc(dp);
++			return;
++		}
++	}
++	send_ok(ssl);
++}
++
++static int
++parse_fs_args(SSL* ssl, char* args, uint8_t** nm, struct delegpt** dp,
++	int* insecure, int* prime)
++{
++	char* zonename;
++	char* rest;
++	size_t nmlen;
++	int nmlabs;
++	/* parse all -x args */
++	while(args[0] == '+') {
++		if(!find_arg2(ssl, args, &rest))
++			return 0;
++		while(*(++args) != 0) {
++			if(*args == 'i' && insecure)
++				*insecure = 1;
++			else if(*args == 'p' && prime)
++				*prime = 1;
++			else {
++				(void)ssl_printf(ssl, "error: unknown option %s\n", args);
++				return 0;
++			}
++		}
++		args = rest;
++	}
++	/* parse name */
++	if(dp) {
++		if(!find_arg2(ssl, args, &rest))
++			return 0;
++		zonename = args;
++		args = rest;
++	} else	zonename = args;
++	if(!parse_arg_name(ssl, zonename, nm, &nmlen, &nmlabs))
++		return 0;
++
++	/* parse dp */
++	if(dp) {
++		if(!(*dp = parse_delegpt(ssl, args, *nm, 1))) {
++			free(*nm);
++			return 0;
++		}
++	}
++	return 1;
++}
++
++/** do the forward_add command */
++static void
++do_forward_add(SSL* ssl, struct worker* worker, char* args)
++{
++	struct iter_forwards* fwd = worker->env.fwds;
++	int insecure = 0;
++	uint8_t* nm = NULL;
++	struct delegpt* dp = NULL;
++	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
++		return;
++	if(insecure) {
++		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
++			nm)) {
++			(void)ssl_printf(ssl, "error out of memory\n");
++			delegpt_free_mlc(dp);
++			free(nm);
++			return;
++		}
++	}
++	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
++		(void)ssl_printf(ssl, "error out of memory\n");
++		delegpt_free_mlc(dp);
++		free(nm);
++		return;
++	}
++	free(nm);
++	send_ok(ssl);
++}
++
++/** do the forward_remove command */
++static void
++do_forward_remove(SSL* ssl, struct worker* worker, char* args)
++{
++	struct iter_forwards* fwd = worker->env.fwds;
++	int insecure = 0;
++	uint8_t* nm = NULL;
++	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
++		return;
++	if(insecure)
++		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
++			nm);
++	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
++	free(nm);
++	send_ok(ssl);
++}
++
++/** do the stub_add command */
++static void
++do_stub_add(SSL* ssl, struct worker* worker, char* args)
++{
++	struct iter_forwards* fwd = worker->env.fwds;
++	int insecure = 0, prime = 0;
++	uint8_t* nm = NULL;
++	struct delegpt* dp = NULL;
++	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
++		return;
++	if(insecure) {
++		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
++			nm)) {
++			(void)ssl_printf(ssl, "error out of memory\n");
++			delegpt_free_mlc(dp);
++			free(nm);
+ 			return;
+ 		}
+ 	}
++	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
++		if(insecure) anchors_delete_insecure(worker->env.anchors,
++			LDNS_RR_CLASS_IN, nm);
++		(void)ssl_printf(ssl, "error out of memory\n");
++		delegpt_free_mlc(dp);
++		free(nm);
++		return;
++	}
++	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
++		(void)ssl_printf(ssl, "error out of memory\n");
++		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
++		if(insecure) anchors_delete_insecure(worker->env.anchors,
++			LDNS_RR_CLASS_IN, nm);
++		delegpt_free_mlc(dp);
++		free(nm);
++		return;
++	}
++	free(nm);
++	send_ok(ssl);
++}
++
++/** do the stub_remove command */
++static void
++do_stub_remove(SSL* ssl, struct worker* worker, char* args)
++{
++	struct iter_forwards* fwd = worker->env.fwds;
++	int insecure = 0;
++	uint8_t* nm = NULL;
++	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
++		return;
++	if(insecure)
++		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
++			nm);
++	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
++	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm);
++	free(nm);
+ 	send_ok(ssl);
+ }
+ 
+@@ -1570,9 +1740,11 @@
+ 		return;
+ 	}
+ 	if(!ssl_printf(a->ssl, "%s %s ttl %d ping %d var %d rtt %d rto %d "
++		"tA %d tAAAA %d tother %d "
+ 		"ednsknown %d edns %d delay %d lame dnssec %d rec %d A %d "
+ 		"other %d\n", ip_str, name, (int)(d->ttl - a->now),
+ 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
++		d->timeout_A, d->timeout_AAAA, d->timeout_other,
+ 		(int)d->edns_lame_known, (int)d->edns_version,
+ 		(int)(a->now<d->probedelay?d->probedelay-a->now:0),
+ 		(int)d->isdnsseclame, (int)d->rec_lame, (int)d->lame_type_A,
+@@ -1652,17 +1824,8 @@
+ static void
+ do_list_stubs(SSL* ssl, struct worker* worker)
+ {
+-	/* readonly structure */
+-	int m;
+ 	struct iter_hints_stub* z;
+-	struct iter_env* ie;
+-	m = modstack_find(&worker->env.mesh->mods, "iterator");
+-	if(m == -1) {
+-		(void)ssl_printf(ssl, "error no iterator module\n");
+-		return;
+-	}
+-	ie = (struct iter_env*)worker->env.modinfo[m];
+-	RBTREE_FOR(z, struct iter_hints_stub*, &ie->hints->tree) {
++	RBTREE_FOR(z, struct iter_hints_stub*, &worker->env.hints->tree) {
+ 		if(!ssl_print_name_dp(ssl, 
+ 			z->noprime?"stub noprime":"stub prime", z->node.name,
+ 			z->node.dclass, z->dp))
+@@ -1780,6 +1943,26 @@
+ 	} else if(cmdcmp(p, "list_local_data", 15)) {
+ 		do_list_local_data(ssl, worker);
+ 		return;
++	} else if(cmdcmp(p, "stub_add", 8)) {
++		/* must always distribute this cmd */
++		if(rc) distribute_cmd(rc, ssl, cmd);
++		do_stub_add(ssl, worker, skipwhite(p+8));
++		return;
++	} else if(cmdcmp(p, "stub_remove", 11)) {
++		/* must always distribute this cmd */
++		if(rc) distribute_cmd(rc, ssl, cmd);
++		do_stub_remove(ssl, worker, skipwhite(p+11));
++		return;
++	} else if(cmdcmp(p, "forward_add", 11)) {
++		/* must always distribute this cmd */
++		if(rc) distribute_cmd(rc, ssl, cmd);
++		do_forward_add(ssl, worker, skipwhite(p+11));
++		return;
++	} else if(cmdcmp(p, "forward_remove", 14)) {
++		/* must always distribute this cmd */
++		if(rc) distribute_cmd(rc, ssl, cmd);
++		do_forward_remove(ssl, worker, skipwhite(p+14));
++		return;
+ 	} else if(cmdcmp(p, "forward", 7)) {
+ 		/* must always distribute this cmd */
+ 		if(rc) distribute_cmd(rc, ssl, cmd);
+diff -Naur unbound-1.4.16/daemon/worker.c unbound-trunk/daemon/worker.c
+--- unbound-1.4.16/daemon/worker.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/daemon/worker.c	2012-02-22 20:37:15.803368186 -0500
+@@ -67,7 +67,9 @@
+ #include "util/fptr_wlist.h"
+ #include "util/tube.h"
+ #include "iterator/iter_fwd.h"
++#include "iterator/iter_hints.h"
+ #include "validator/autotrust.h"
++#include "validator/val_anchor.h"
+ 
+ #ifdef HAVE_SYS_TYPES_H
+ #  include <sys/types.h>
+@@ -148,7 +150,7 @@
+ #ifdef UNBOUND_ALLOC_STATS
+ 	/* debug func in validator module */
+ 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
+-	size_t me, iter, val;
++	size_t me, iter, val, anch;
+ 	int i;
+ 	if(verbosity < VERB_ALGO) 
+ 		return;
+@@ -160,6 +162,7 @@
+ 	mesh = mesh_get_mem(worker->env.mesh);
+ 	ac = alloc_get_mem(&worker->alloc);
+ 	superac = alloc_get_mem(&worker->daemon->superalloc);
++	anch = anchors_get_mem(worker->env.anchors);
+ 	iter = 0;
+ 	val = 0;
+ 	for(i=0; i<worker->env.mesh->mods.num; i++) {
+@@ -177,7 +180,8 @@
+ 		+ regional_get_mem(worker->scratchpad) 
+ 		+ sizeof(*worker->env.scratch_buffer) 
+ 		+ ldns_buffer_capacity(worker->env.scratch_buffer)
+-		+ forwards_get_mem(worker->env.fwds);
++		+ forwards_get_mem(worker->env.fwds)
++		+ hints_get_mem(worker->env.hints;
+ 	if(worker->thread_num == 0)
+ 		me += acl_list_get_mem(worker->daemon->acl);
+ 	if(cur_serv) {
+@@ -185,12 +189,12 @@
+ 	}
+ 	total = front+back+mesh+msg+rrset+infra+iter+val+ac+superac+me;
+ 	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
+-		"rrset=%u infra=%u iter=%u val=%u "
++		"rrset=%u infra=%u iter=%u val=%u anchors=%u "
+ 		"alloccache=%u globalalloccache=%u me=%u",
+ 		(unsigned)total, (unsigned)front, (unsigned)back, 
+ 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
+-		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)ac, 
+-		(unsigned)superac, (unsigned)me);
++		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)anch,
++		(unsigned)ac, (unsigned)superac, (unsigned)me);
+ 	debug_total_mem(total);
+ #else /* no UNBOUND_ALLOC_STATS */
+ 	size_t val = 0;
+@@ -1158,6 +1162,12 @@
+ 		worker_delete(worker);
+ 		return 0;
+ 	}
++	if(!(worker->env.hints = hints_create()) ||
++		!hints_apply_cfg(worker->env.hints, cfg)) {
++		log_err("Could not set root or stub hints");
++		worker_delete(worker);
++		return 0;
++	}
+ 	/* one probe timer per process -- if we have 5011 anchors */
+ 	if(autr_get_num_anchors(worker->env.anchors) > 0
+ #ifndef THREADS_DISABLED
+@@ -1210,6 +1220,7 @@
+ 	mesh_delete(worker->env.mesh);
+ 	ldns_buffer_free(worker->env.scratch_buffer);
+ 	forwards_delete(worker->env.fwds);
++	hints_delete(worker->env.hints);
+ 	listen_delete(worker->front);
+ 	outside_network_delete(worker->back);
+ 	comm_signal_delete(worker->comsig);
+diff -Naur unbound-1.4.16/iterator/iterator.c unbound-trunk/iterator/iterator.c
+--- unbound-1.4.16/iterator/iterator.c	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/iterator/iterator.c	2012-02-22 20:37:15.042368186 -0500
+@@ -89,7 +89,6 @@
+ 	iter_env = (struct iter_env*)env->modinfo[id];
+ 	free(iter_env->target_fetch_policy);
+ 	priv_delete(iter_env->priv);
+-	hints_delete(iter_env->hints);
+ 	donotq_delete(iter_env->donotq);
+ 	free(iter_env);
+ 	env->modinfo[id] = NULL;
+@@ -260,7 +259,7 @@
+ 	/* do not waste time trying to validate this servfail */
+ 	err.security = sec_status_indeterminate;
+ 	verbose(VERB_ALGO, "store error response in message cache");
+-	if(!iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, NULL)) {
++	if(!iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, 0, NULL)) {
+ 		log_err("error_response_cache: could not store error (nomem)");
+ 	}
+ 	return error_response(qstate, id, rcode);
+@@ -532,21 +531,20 @@
+  * Generate and send a root priming request.
+  * @param qstate: the qtstate that triggered the need to prime.
+  * @param iq: iterator query state.
+- * @param ie: iterator global state.
+  * @param id: module id.
+  * @param qclass: the class to prime.
+  * @return 0 on failure
+  */
+ static int
+-prime_root(struct module_qstate* qstate, struct iter_qstate* iq, 
+-	struct iter_env* ie, int id, uint16_t qclass)
++prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
++	uint16_t qclass)
+ {
+ 	struct delegpt* dp;
+ 	struct module_qstate* subq;
+ 	verbose(VERB_DETAIL, "priming . %s NS", 
+ 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)?
+ 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)->name:"??");
+-	dp = hints_lookup_root(ie->hints, qclass);
++	dp = hints_lookup_root(qstate->env->hints, qclass);
+ 	if(!dp) {
+ 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
+ 		return 0;
+@@ -590,7 +588,6 @@
+  *
+  * @param qstate: the qtstate that triggered the need to prime.
+  * @param iq: iterator query state.
+- * @param ie: iterator global state.
+  * @param id: module id.
+  * @param q: request name.
+  * @return true if a priming subrequest was made, false if not. The will only
+@@ -599,8 +596,8 @@
+  *         that a noprime-stub is available and resolution can continue.
+  */
+ static int
+-prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, 
+-	struct iter_env* ie, int id, struct query_info* q)
++prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
++	struct query_info* q)
+ {
+ 	/* Lookup the stub hint. This will return null if the stub doesn't 
+ 	 * need to be re-primed. */
+@@ -614,7 +611,8 @@
+ 		/* remove first label, but not for root */
+ 		dname_remove_label(&delname, &delnamelen);
+ 
+-	stub = hints_lookup_stub(ie->hints, delname, q->qclass, iq->dp);
++	stub = hints_lookup_stub(qstate->env->hints, delname, q->qclass,
++		iq->dp);
+ 	/* The stub (if there is one) does not need priming. */
+ 	if(!stub)
+ 		return 0;
+@@ -1042,14 +1040,15 @@
+ 		if(delname)
+ 		     iq->dp = dns_cache_find_delegation(qstate->env, delname, 
+ 			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
+-			qstate->region, &iq->deleg_msg, *qstate->env->now);
++			qstate->region, &iq->deleg_msg,
++			*qstate->env->now+qstate->prefetch_leeway);
+ 		else iq->dp = NULL;
+ 
+ 		/* If the cache has returned nothing, then we have a 
+ 		 * root priming situation. */
+ 		if(iq->dp == NULL) {
+ 			/* if there is a stub, then no root prime needed */
+-			int r = prime_stub(qstate, iq, ie, id, &iq->qchase);
++			int r = prime_stub(qstate, iq, id, &iq->qchase);
+ 			if(r == 2)
+ 				break; /* got noprime-stub-zone, continue */
+ 			else if(r)
+@@ -1058,7 +1057,7 @@
+ 				iq->qchase.qclass)) {
+ 				/* forward zone root, no root prime needed */
+ 				/* fill in some dp - safety belt */
+-				iq->dp = hints_lookup_root(ie->hints, 
++				iq->dp = hints_lookup_root(qstate->env->hints, 
+ 					iq->qchase.qclass);
+ 				if(!iq->dp) {
+ 					log_err("internal error: no hints dp");
+@@ -1075,7 +1074,7 @@
+ 			}
+ 			/* Note that the result of this will set a new
+ 			 * DelegationPoint based on the result of priming. */
+-			if(!prime_root(qstate, iq, ie, id, iq->qchase.qclass))
++			if(!prime_root(qstate, iq, id, iq->qchase.qclass))
+ 				return error_response(qstate, id, 
+ 					LDNS_RCODE_REFUSED);
+ 
+@@ -1104,7 +1103,7 @@
+ 				/* use safety belt */
+ 				verbose(VERB_QUERY, "Cache has root NS but "
+ 				"no addresses. Fallback to the safety belt.");
+-				iq->dp = hints_lookup_root(ie->hints, 
++				iq->dp = hints_lookup_root(qstate->env->hints, 
+ 					iq->qchase.qclass);
+ 				/* note deleg_msg is from previous lookup,
+ 				 * but RD is on, so it is not used */
+@@ -1151,20 +1150,19 @@
+  *
+  * @param qstate: query state.
+  * @param iq: iterator query state.
+- * @param ie: iterator shared global environment.
+  * @param id: module id.
+  * @return true if the event needs more request processing immediately,
+  *         false if not.
+  */
+ static int
+ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
+-	struct iter_env* ie, int id)
++	int id)
+ {
+ 	log_query_info(VERB_QUERY, "resolving (init part 2): ", 
+ 		&qstate->qinfo);
+ 
+ 	/* Check to see if we need to prime a stub zone. */
+-	if(prime_stub(qstate, iq, ie, id, &iq->qchase)) {
++	if(prime_stub(qstate, iq, id, &iq->qchase)) {
+ 		/* A priming sub request was made */
+ 		return 0;
+ 	}
+@@ -1261,7 +1259,8 @@
+ 		} else {
+ 			subiq->dp = dns_cache_find_delegation(qstate->env, 
+ 				name, namelen, qtype, qclass, subq->region,
+-				&subiq->deleg_msg, *qstate->env->now); 
++				&subiq->deleg_msg,
++				*qstate->env->now+subq->prefetch_leeway); 
+ 			/* if no dp, then it's from root, refetch unneeded */
+ 			if(subiq->dp) { 
+ 				subiq->dnssec_expected = iter_indicates_dnssec(
+@@ -1833,6 +1832,7 @@
+ 		}
+ 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+ 			iq->response->rep, 0, qstate->prefetch_leeway,
++			iq->dp&&iq->dp->has_parent_side_NS,
+ 			qstate->region))
+ 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+ 		/* close down outstanding requests to be discarded */
+@@ -1872,7 +1872,7 @@
+ 			/* Store the referral under the current query */
+ 			/* no prefetch-leeway, since its not the answer */
+ 			if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+-				iq->response->rep, 1, 0, NULL))
++				iq->response->rep, 1, 0, 0, NULL))
+ 				return error_response(qstate, id, 
+ 					LDNS_RCODE_SERVFAIL);
+ 			if(iq->store_parent_NS)
+@@ -1958,7 +1958,9 @@
+ 		 * the partial query answer (CNAME only). */
+ 		/* prefetchleeway applied because this updates answer parts */
+ 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+-			iq->response->rep, 1, qstate->prefetch_leeway, NULL))
++			iq->response->rep, 1, qstate->prefetch_leeway,
++			iq->dp&&iq->dp->has_parent_side_NS,
++			NULL))
+ 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+ 		/* set the current request's qname to the new value. */
+ 		iq->qchase.qname = sname;
+@@ -2336,7 +2338,6 @@
+ processCollectClass(struct module_qstate* qstate, int id)
+ {
+ 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
+-	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
+ 	struct module_qstate* subq;
+ 	/* If qchase.qclass == 0 then send out queries for all classes.
+ 	 * Otherwise, do nothing (wait for all answers to arrive and the
+@@ -2345,7 +2346,8 @@
+ 	if(iq->qchase.qclass == 0) {
+ 		uint16_t c = 0;
+ 		iq->qchase.qclass = LDNS_RR_CLASS_ANY;
+-		while(iter_get_next_root(ie->hints, qstate->env->fwds, &c)) {
++		while(iter_get_next_root(qstate->env->hints,
++			qstate->env->fwds, &c)) {
+ 			/* generate query for this class */
+ 			log_nametypeclass(VERB_ALGO, "spawn collect query",
+ 				qstate->qinfo.qname, qstate->qinfo.qtype, c);
+@@ -2435,6 +2437,7 @@
+ 		if(qstate->query_flags&BIT_RD) {
+ 			if(!iter_dns_store(qstate->env, &qstate->qinfo, 
+ 				iq->response->rep, 0, qstate->prefetch_leeway,
++				iq->dp&&iq->dp->has_parent_side_NS,
+ 				qstate->region))
+ 				return error_response(qstate, id, 
+ 					LDNS_RCODE_SERVFAIL);
+@@ -2493,7 +2496,7 @@
+ 				cont = processInitRequest(qstate, iq, ie, id);
+ 				break;
+ 			case INIT_REQUEST_2_STATE:
+-				cont = processInitRequest2(qstate, iq, ie, id);
++				cont = processInitRequest2(qstate, iq, id);
+ 				break;
+ 			case INIT_REQUEST_3_STATE:
+ 				cont = processInitRequest3(qstate, iq, id);
+@@ -2705,8 +2708,7 @@
+ 	if(!ie)
+ 		return 0;
+ 	return sizeof(*ie) + sizeof(int)*((size_t)ie->max_dependency_depth+1)
+-		+ hints_get_mem(ie->hints) + donotq_get_mem(ie->donotq)
+-		+ priv_get_mem(ie->priv);
++		+ donotq_get_mem(ie->donotq) + priv_get_mem(ie->priv);
+ }
+ 
+ /**
+diff -Naur unbound-1.4.16/iterator/iterator.h unbound-trunk/iterator/iterator.h
+--- unbound-1.4.16/iterator/iterator.h	2011-09-16 10:11:12.000000000 -0400
++++ unbound-trunk/iterator/iterator.h	2012-02-22 20:37:15.038368186 -0500
+@@ -86,14 +86,6 @@
+  * Global state for the iterator. 
+  */
+ struct iter_env {
+-	/** 
+-	 * The hints -- these aren't stored in the cache because they don't 
+-	 * expire. The hints are always used to "prime" the cache. Note 
+-	 * that both root hints and stub zone "hints" are stored in this 
+-	 * data structure.
+-	 */
+-	struct iter_hints* hints;
+-
+ 	/** A flag to indicate whether or not we have an IPv6 route */
+ 	int supports_ipv6;
+ 
+diff -Naur unbound-1.4.16/iterator/iter_delegpt.c unbound-trunk/iterator/iter_delegpt.c
+--- unbound-1.4.16/iterator/iter_delegpt.c	2011-09-07 10:34:10.000000000 -0400
++++ unbound-trunk/iterator/iter_delegpt.c	2012-02-22 20:37:15.040368186 -0500
+@@ -90,6 +90,7 @@
+ int 
+ delegpt_set_name(struct delegpt* dp, struct regional* region, uint8_t* name)
+ {
++	log_assert(!dp->dp_type_mlc);
+ 	dp->namelabs = dname_count_size_labels(name, &dp->namelen);
+ 	dp->name = regional_alloc_init(region, name, dp->namelen);
+ 	return dp->name != 0;
+@@ -102,6 +103,7 @@
+ 	struct delegpt_ns* ns;
+ 	size_t len;
+ 	(void)dname_count_size_labels(name, &len);
++	log_assert(!dp->dp_type_mlc);
+ 	/* slow check for duplicates to avoid counting failures when
+ 	 * adding the same server as a dependency twice */
+ 	if(delegpt_find_ns(dp, name, len))
+@@ -120,7 +122,7 @@
+ 	ns->lame = (uint8_t)lame;
+ 	ns->done_pside4 = 0;
+ 	ns->done_pside6 = 0;
+-	return 1;
++	return ns->name != 0;
+ }
+ 
+ struct delegpt_ns*
+@@ -157,6 +159,7 @@
+ 	socklen_t addrlen, int bogus, int lame)
+ {
+ 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
++	log_assert(!dp->dp_type_mlc);
+ 	if(!ns) {
+ 		/* ignore it */
+ 		return 1;
+@@ -177,6 +180,7 @@
+ 	int lame)
+ {
+ 	struct delegpt_addr* a;
++	log_assert(!dp->dp_type_mlc);
+ 	/* check for duplicates */
+ 	if((a = delegpt_find_addr(dp, addr, addrlen))) {
+ 		if(bogus)
+@@ -377,6 +381,7 @@
+ 	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
+ 		ns_rrset->entry.data;
+ 	size_t i;
++	log_assert(!dp->dp_type_mlc);
+ 	if(nsdata->security == sec_status_bogus)
+ 		dp->bogus = 1;
+ 	for(i=0; i<nsdata->count; i++) {
+@@ -399,6 +404,7 @@
+         size_t i;
+         struct sockaddr_in sa;
+         socklen_t len = (socklen_t)sizeof(sa);
++	log_assert(!dp->dp_type_mlc);
+         memset(&sa, 0, len);
+         sa.sin_family = AF_INET;
+         sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+@@ -422,6 +428,7 @@
+         size_t i;
+         struct sockaddr_in6 sa;
+         socklen_t len = (socklen_t)sizeof(sa);
++	log_assert(!dp->dp_type_mlc);
+         memset(&sa, 0, len);
+         sa.sin6_family = AF_INET6;
+         sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+@@ -492,3 +499,141 @@
+ 			ns->resolved = 1;
+ 	}
+ }
++
++struct delegpt* delegpt_create_mlc(uint8_t* name)
++{
++	struct delegpt* dp=(struct delegpt*)calloc(1, sizeof(*dp));
++	if(!dp)
++		return NULL;
++	memset(dp, 0, sizeof(*dp));
++	dp->dp_type_mlc = 1;
++	if(name) {
++		dp->namelabs = dname_count_size_labels(name, &dp->namelen);
++		dp->name = memdup(name, dp->namelen);
++		if(!dp->name) {
++			free(dp);
++			return NULL;
++		}
++	}
++	return dp;
++}
++
++void delegpt_free_mlc(struct delegpt* dp)
++{
++	struct delegpt_ns* n, *nn;
++	struct delegpt_addr* a, *na;
++	if(!dp) return;
++	log_assert(dp->dp_type_mlc);
++	n = dp->nslist;
++	while(n) {
++		nn = n->next;
++		free(n->name);
++		free(n);
++		n = nn;
++	}
++	a = dp->target_list;
++	while(a) {
++		na = a->next_target;
++		free(a);
++		a = na;
++	}
++	free(dp->name);
++	free(dp);
++}
++
++int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name)
++{
++	log_assert(dp->dp_type_mlc);
++	dp->namelabs = dname_count_size_labels(name, &dp->namelen);
++	dp->name = memdup(name, dp->namelen);
++	return (dp->name != NULL);
++}
++
++int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame)
++{
++	struct delegpt_ns* ns;
++	size_t len;
++	(void)dname_count_size_labels(name, &len);
++	log_assert(dp->dp_type_mlc);
++	/* slow check for duplicates to avoid counting failures when
++	 * adding the same server as a dependency twice */
++	if(delegpt_find_ns(dp, name, len))
++		return 1;
++	ns = (struct delegpt_ns*)malloc(sizeof(struct delegpt_ns));
++	if(!ns)
++		return 0;
++	ns->namelen = len;
++	ns->name = memdup(name, ns->namelen);
++	if(!ns->name) {
++		free(ns);
++		return 0;
++	}
++	ns->next = dp->nslist;
++	dp->nslist = ns;
++	ns->resolved = 0;
++	ns->got4 = 0;
++	ns->got6 = 0;
++	ns->lame = (uint8_t)lame;
++	ns->done_pside4 = 0;
++	ns->done_pside6 = 0;
++	return 1;
++}
++
++int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
++	socklen_t addrlen, int bogus, int lame)
++{
++	struct delegpt_addr* a;
++	log_assert(dp->dp_type_mlc);
++	/* check for duplicates */
++	if((a = delegpt_find_addr(dp, addr, addrlen))) {
++		if(bogus)
++			a->bogus = bogus;
++		if(!lame)
++			a->lame = 0;
++		return 1;
++	}
++
++	a = (struct delegpt_addr*)malloc(sizeof(struct delegpt_addr));
++	if(!a)
++		return 0;
++	a->next_target = dp->target_list;
++	dp->target_list = a;
++	a->next_result = 0;
++	a->next_usable = dp->usable_list;
++	dp->usable_list = a;
++	memcpy(&a->addr, addr, addrlen);
++	a->addrlen = addrlen;
++	a->attempts = 0;
++	a->bogus = bogus;
++	a->lame = lame;
++	return 1;
++}
++
++int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
++	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int lame)
++{
++	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
++	log_assert(dp->dp_type_mlc);
++	if(!ns) {
++		/* ignore it */
++		return 1;
++	}
++	if(!lame) {
++		if(addr_is_ip6(addr, addrlen))
++			ns->got6 = 1;
++		else	ns->got4 = 1;
++		if(ns->got4 && ns->got6)
++			ns->resolved = 1;
++	}
++	return delegpt_add_addr_mlc(dp, addr, addrlen, bogus, lame);
++}
++
++size_t delegpt_get_mem(struct delegpt* dp)
++{
++	struct delegpt_ns* ns;
++	size_t s = sizeof(*dp) + dp->namelen +
++		delegpt_count_targets(dp)*sizeof(struct delegpt_addr);
++	for(ns=dp->nslist; ns; ns=ns->next)
++		s += sizeof(*ns)+ns->namelen;
++	return s;
++}
+diff -Naur unbound-1.4.16/iterator/iter_delegpt.h unbound-trunk/iterator/iter_delegpt.h
+--- unbound-1.4.16/iterator/iter_delegpt.h	2011-09-07 10:34:10.000000000 -0400
++++ unbound-trunk/iterator/iter_delegpt.h	2012-02-22 20:37:15.041368186 -0500
+@@ -79,6 +79,8 @@
+ 	 * Also true if the delegationpoint was created from a delegation
+ 	 * message and thus contains the parent-side-info already. */
+ 	uint8_t has_parent_side_NS;
++	/** for assertions on type of delegpt */
++	uint8_t dp_type_mlc;
+ };
+ 
+ /**
+@@ -346,4 +348,64 @@
+  */
+ void delegpt_no_ipv4(struct delegpt* dp);
+ 
++/** 
++ * create malloced delegation point, with the given name 
++ * @param name: uncompressed wireformat of degegpt name.
++ * @return NULL on alloc failure
++ */
++struct delegpt* delegpt_create_mlc(uint8_t* name);
++
++/** 
++ * free malloced delegation point.
++ * @param dp: must have been created with delegpt_create_mlc, free'd. 
++ */
++void delegpt_free_mlc(struct delegpt* dp);
++
++/**
++ * Set name of delegation point.
++ * @param dp: delegation point. malloced.
++ * @param name: name to use.
++ * @return false on error.
++ */
++int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name);
++
++/**
++ * add a name to malloced delegation point.
++ * @param dp: must have been created with delegpt_create_mlc. 
++ * @param name: the name to add.
++ * @param lame: the name is lame, disprefer.
++ * @return false on error.
++ */
++int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame);
++
++/**
++ * add an address to a malloced delegation point.
++ * @param dp: must have been created with delegpt_create_mlc. 
++ * @param addr: the address.
++ * @param addrlen: the length of addr.
++ * @param bogus: if address is bogus.
++ * @param lame: if address is lame.
++ * @return false on error.
++ */
++int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
++	socklen_t addrlen, int bogus, int lame);
++
++/**
++ * Add target address to the delegation point.
++ * @param dp: must have been created with delegpt_create_mlc. 
++ * @param name: name for which target was found (must be in nslist).
++ *	This name is marked resolved.
++ * @param namelen: length of name.
++ * @param addr: the address.
++ * @param addrlen: the length of addr.
++ * @param bogus: security status for the address, pass true if bogus.
++ * @param lame: address is lame.
++ * @return false on error.
++ */
++int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
++	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int lame);
++
++/** get memory in use by dp */
++size_t delegpt_get_mem(struct delegpt* dp);
++
+ #endif /* ITERATOR_ITER_DELEGPT_H */
+diff -Naur unbound-1.4.16/iterator/iter_fwd.c unbound-trunk/iterator/iter_fwd.c
+--- unbound-1.4.16/iterator/iter_fwd.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/iterator/iter_fwd.c	2012-02-22 20:37:15.039368186 -0500
+@@ -45,7 +45,6 @@
+ #include <ldns/rr.h>
+ #include "iterator/iter_fwd.h"
+ #include "iterator/iter_delegpt.h"
+-#include "util/regional.h"
+ #include "util/log.h"
+ #include "util/config_file.h"
+ #include "util/net_help.h"
+@@ -73,21 +72,36 @@
+ 		sizeof(struct iter_forwards));
+ 	if(!fwd)
+ 		return NULL;
+-	fwd->region = regional_create();
+-	if(!fwd->region) {
+-		forwards_delete(fwd);
+-		return NULL;
+-	}
+ 	return fwd;
+ }
+ 
++static void fwd_zone_free(struct iter_forward_zone* n)
++{
++	if(!n) return;
++	delegpt_free_mlc(n->dp);
++	free(n->name);
++	free(n);
++}
++
++static void delfwdnode(rbnode_t* n, void* ATTR_UNUSED(arg))
++{
++	struct iter_forward_zone* node = (struct iter_forward_zone*)n;
++	fwd_zone_free(node);
++}
++
++static void fwd_del_tree(struct iter_forwards* fwd)
++{
++	if(fwd->tree)
++		traverse_postorder(fwd->tree, &delfwdnode, NULL);
++	free(fwd->tree);
++}
++
+ void 
+ forwards_delete(struct iter_forwards* fwd)
+ {
+ 	if(!fwd) 
+ 		return;
+-	regional_destroy(fwd->region);
+-	free(fwd->tree);
++	fwd_del_tree(fwd);
+ 	free(fwd);
+ }
+ 
+@@ -96,20 +110,28 @@
+ forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm, 
+ 	size_t nmlen, int nmlabs, struct delegpt* dp)
+ {
+-	struct iter_forward_zone* node = regional_alloc(fwd->region,
++	struct iter_forward_zone* node = (struct iter_forward_zone*)malloc(
+ 		sizeof(struct iter_forward_zone));
+-	if(!node)
++	if(!node) {
++		delegpt_free_mlc(dp);
+ 		return 0;
++	}
+ 	node->node.key = node;
+ 	node->dclass = c;
+-	node->name = regional_alloc_init(fwd->region, nm, nmlen);
+-	if(!node->name)
++	node->name = memdup(nm, nmlen);
++	if(!node->name) {
++		delegpt_free_mlc(dp);
++		free(node);
+ 		return 0;
++	}
+ 	node->namelen = nmlen;
+ 	node->namelabs = nmlabs;
+ 	node->dp = dp;
+ 	if(!rbtree_insert(fwd->tree, &node->node)) {
+ 		log_err("duplicate forward zone ignored.");
++		delegpt_free_mlc(dp);
++		free(node->name);
++		free(node);
+ 	}
+ 	return 1;
+ }
+@@ -152,33 +174,32 @@
+ }
+ 
+ /** set zone name */
+-static int 
+-read_fwds_name(struct iter_forwards* fwd, struct config_stub* s, 
+-	struct delegpt* dp)
++static struct delegpt* 
++read_fwds_name(struct config_stub* s)
+ {
++	struct delegpt* dp;
+ 	ldns_rdf* rdf;
+ 	if(!s->name) {
+ 		log_err("forward zone without a name (use name \".\" to forward everything)");
+-		return 0;
++		return NULL;
+ 	}
+ 	rdf = ldns_dname_new_frm_str(s->name);
+ 	if(!rdf) {
+ 		log_err("cannot parse forward zone name %s", s->name);
+-		return 0;
++		return NULL;
+ 	}
+-	if(!delegpt_set_name(dp, fwd->region, ldns_rdf_data(rdf))) {
++	if(!(dp=delegpt_create_mlc(ldns_rdf_data(rdf)))) {
+ 		ldns_rdf_deep_free(rdf);
+ 		log_err("out of memory");
+-		return 0;
++		return NULL;
+ 	}
+ 	ldns_rdf_deep_free(rdf);
+-	return 1;
++	return dp;
+ }
+ 
+ /** set fwd host names */
+ static int 
+-read_fwds_host(struct iter_forwards* fwd, struct config_stub* s, 
+-	struct delegpt* dp)
++read_fwds_host(struct config_stub* s, struct delegpt* dp)
+ {
+ 	struct config_strlist* p;
+ 	ldns_rdf* rdf;
+@@ -190,7 +211,7 @@
+ 				s->name, p->str);
+ 			return 0;
+ 		}
+-		if(!delegpt_add_ns(dp, fwd->region, ldns_rdf_data(rdf), 0)) {
++		if(!delegpt_add_ns_mlc(dp, ldns_rdf_data(rdf), 0)) {
+ 			ldns_rdf_deep_free(rdf);
+ 			log_err("out of memory");
+ 			return 0;
+@@ -202,8 +223,7 @@
+ 
+ /** set fwd server addresses */
+ static int 
+-read_fwds_addr(struct iter_forwards* fwd, struct config_stub* s, 
+-	struct delegpt* dp)
++read_fwds_addr(struct config_stub* s, struct delegpt* dp)
+ {
+ 	struct config_strlist* p;
+ 	struct sockaddr_storage addr;
+@@ -215,7 +235,7 @@
+ 				s->name, p->str);
+ 			return 0;
+ 		}
+-		if(!delegpt_add_addr(dp, fwd->region, &addr, addrlen, 0, 0)) {
++		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
+ 			log_err("out of memory");
+ 			return 0;
+ 		}
+@@ -229,18 +249,14 @@
+ {
+ 	struct config_stub* s;
+ 	for(s = cfg->forwards; s; s = s->next) {
+-		struct delegpt* dp = delegpt_create(fwd->region);
+-		if(!dp) {
+-			log_err("out of memory");
++		struct delegpt* dp;
++		if(!(dp=read_fwds_name(s)) ||
++			!read_fwds_host(s, dp) ||
++			!read_fwds_addr(s, dp))
+ 			return 0;
+-		}
+ 		/* set flag that parent side NS information is included.
+ 		 * Asking a (higher up) server on the internet is not useful */
+ 		dp->has_parent_side_NS = 1;
+-		if(!read_fwds_name(fwd, s, dp) ||
+-			!read_fwds_host(fwd, s, dp) ||
+-			!read_fwds_addr(fwd, s, dp))
+-			return 0;
+ 		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
+ 			return 0;
+ 		verbose(VERB_QUERY, "Forward zone server list:");
+@@ -268,28 +284,35 @@
+ 	return 0; /* no forwards above, no holes needed */
+ }
+ 
++/** insert a stub hole (if necessary) for stub name */
++static int
++fwd_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
++{
++	struct iter_forward_zone key;
++	key.node.key = &key;
++	key.dclass = c;
++	key.name = nm;
++	key.namelabs = dname_count_size_labels(key.name, &key.namelen);
++	if(need_hole_insert(fwd->tree, &key)) {
++		return forwards_insert_data(fwd, key.dclass, key.name,
++			key.namelen, key.namelabs, NULL);
++	}
++	return 1;
++}
++
+ /** make NULL entries for stubs */
+ static int
+ make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
+ {
+ 	struct config_stub* s;
+-	struct iter_forward_zone key;
+-	key.node.key = &key;
+-	key.dclass = LDNS_RR_CLASS_IN;
+ 	for(s = cfg->stubs; s; s = s->next) {
+ 		ldns_rdf* rdf = ldns_dname_new_frm_str(s->name);
+ 		if(!rdf) {
+ 			log_err("cannot parse stub name '%s'", s->name);
+ 			return 0;
+ 		}
+-		key.name = ldns_rdf_data(rdf);
+-		key.namelabs = dname_count_size_labels(key.name, &key.namelen);
+-		if(!need_hole_insert(fwd->tree, &key)) {
+-			ldns_rdf_deep_free(rdf);
+-			continue;
+-		}
+-		if(!forwards_insert_data(fwd, key.dclass, key.name, 
+-			key.namelen, key.namelabs, NULL)) {
++		if(!fwd_add_stub_hole(fwd, LDNS_RR_CLASS_IN,
++				ldns_rdf_data(rdf))) {
+ 			ldns_rdf_deep_free(rdf);
+ 			log_err("out of memory");
+ 			return 0;
+@@ -302,8 +325,7 @@
+ int 
+ forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg)
+ {
+-	free(fwd->tree);
+-	regional_free_all(fwd->region);
++	fwd_del_tree(fwd);
+ 	fwd->tree = rbtree_create(fwd_cmp);
+ 	if(!fwd->tree)
+ 		return 0;
+@@ -411,15 +433,36 @@
+ size_t 
+ forwards_get_mem(struct iter_forwards* fwd)
+ {
++	struct iter_forward_zone* p;
++	size_t s;
+ 	if(!fwd)
+ 		return 0;
+-	return sizeof(*fwd) + sizeof(*fwd->tree) + 
+-		regional_get_mem(fwd->region);
++	s = sizeof(*fwd) + sizeof(*fwd->tree);
++	RBTREE_FOR(p, struct iter_forward_zone*, fwd->tree) {
++		s += sizeof(*p) + p->namelen + delegpt_get_mem(p->dp);
++	}
++	return s;
++}
++
++static struct iter_forward_zone*
++fwd_zone_find(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
++{
++	struct iter_forward_zone key;
++	key.node.key = &key;
++	key.dclass = c;
++	key.name = nm;
++	key.namelabs = dname_count_size_labels(nm, &key.namelen);
++	return (struct iter_forward_zone*)rbtree_search(fwd->tree, &key);
+ }
+ 
+ int 
+ forwards_add_zone(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
+ {
++	struct iter_forward_zone *z;
++	if((z=fwd_zone_find(fwd, c, dp->name)) != NULL) {
++		(void)rbtree_delete(fwd->tree, &z->node);
++		fwd_zone_free(z);
++	}
+ 	if(!forwards_insert(fwd, c, dp))
+ 		return 0;
+ 	fwd_init_parents(fwd);
+@@ -429,14 +472,34 @@
+ void 
+ forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
+ {
+-	struct iter_forward_zone key;
+-	key.node.key = &key;
+-	key.dclass = c;
+-	key.name = nm;
+-	key.namelabs = dname_count_size_labels(nm, &key.namelen);
+-	if(!rbtree_search(fwd->tree, &key))
++	struct iter_forward_zone *z;
++	if(!(z=fwd_zone_find(fwd, c, nm)))
++		return; /* nothing to do */
++	(void)rbtree_delete(fwd->tree, &z->node);
++	fwd_zone_free(z);
++	fwd_init_parents(fwd);
++}
++
++int
++forwards_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
++{
++	if(!fwd_add_stub_hole(fwd, c, nm)) {
++		return 0;
++	}
++	fwd_init_parents(fwd);
++	return 1;
++}
++
++void
++forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
++{
++	struct iter_forward_zone *z;
++	if(!(z=fwd_zone_find(fwd, c, nm)))
+ 		return; /* nothing to do */
+-	(void)rbtree_delete(fwd->tree, &key);
++	if(z->dp != NULL)
++		return; /* not a stub hole */
++	(void)rbtree_delete(fwd->tree, &z->node);
++	fwd_zone_free(z);
+ 	fwd_init_parents(fwd);
+ }
+ 
+diff -Naur unbound-1.4.16/iterator/iter_fwd.h unbound-trunk/iterator/iter_fwd.h
+--- unbound-1.4.16/iterator/iter_fwd.h	2010-07-07 09:13:36.000000000 -0400
++++ unbound-trunk/iterator/iter_fwd.h	2012-02-22 20:37:15.041368186 -0500
+@@ -45,14 +45,11 @@
+ #include "util/rbtree.h"
+ struct config_file;
+ struct delegpt;
+-struct regional;
+ 
+ /**
+  * Iterator forward zones structure
+  */
+ struct iter_forwards {
+-	/** regional where forward zone server addresses are allocated */
+-	struct regional* region;
+ 	/** 
+ 	 * Zones are stored in this tree. Sort order is specially chosen.
+ 	 * first sorted on qclass. Then on dname in nsec-like order, so that
+@@ -77,7 +74,9 @@
+ 	int namelabs;
+ 	/** delegation point with forward server information for this zone. 
+ 	 * If NULL then this forward entry is used to indicate that a
+-	 * stub-zone with the same name exists, and should be used. */
++	 * stub-zone with the same name exists, and should be used. 
++	 * This delegation point is malloced.
++	 */
+ 	struct delegpt* dp;
+ 	/** pointer to parent in tree (or NULL if none) */
+ 	struct iter_forward_zone* parent;
+@@ -152,9 +151,7 @@
+  * @param fwd: the forward data structure
+  * @param c: class of zone
+  * @param dp: delegation point with name and target nameservers for new
+- *	forward zone. This delegation point and all its data must be
+- *	malloced in the fwd->region. (then it is freed when the fwd is
+- *	deleted).
++ *	forward zone. malloced.
+  * @return false on failure (out of memory);
+  */
+ int forwards_add_zone(struct iter_forwards* fwd, uint16_t c, 
+@@ -162,12 +159,31 @@
+ 
+ /**
+  * Remove zone from forward structure. For external use since it 
+- * recalcs the tree parents. Does not actually release any memory, the region 
+- * is unchanged.
++ * recalcs the tree parents.
+  * @param fwd: the forward data structure
+  * @param c: class of zone
+  * @param nm: name of zone (in uncompressed wireformat).
+  */
+ void forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm);
+ 
++/**
++ * Add stub hole (empty entry in forward table, that makes resolution skip
++ * a forward-zone because the stub zone should override the forward zone).
++ * Does not add one if not necessary.
++ * @param fwd: the forward data structure
++ * @param c: class of zone
++ * @param nm: name of zone (in uncompressed wireformat).
++ * @return false on failure (out of memory);
++ */
++int forwards_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm);
++
++/**
++ * Remove stub hole, if one exists.
++ * @param fwd: the forward data structure
++ * @param c: class of zone
++ * @param nm: name of zone (in uncompressed wireformat).
++ */
++void forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c,
++	uint8_t* nm);
++
+ #endif /* ITERATOR_ITER_FWD_H */
+diff -Naur unbound-1.4.16/iterator/iter_hints.c unbound-trunk/iterator/iter_hints.c
+--- unbound-1.4.16/iterator/iter_hints.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/iterator/iter_hints.c	2012-02-22 20:37:15.041368186 -0500
+@@ -44,7 +44,6 @@
+ #include <ldns/rr.h>
+ #include "iterator/iter_hints.h"
+ #include "iterator/iter_delegpt.h"
+-#include "util/regional.h"
+ #include "util/log.h"
+ #include "util/config_file.h"
+ #include "util/net_help.h"
+@@ -57,26 +56,39 @@
+ 		sizeof(struct iter_hints));
+ 	if(!hints)
+ 		return NULL;
+-	hints->region = regional_create();
+-	if(!hints->region) {
+-		hints_delete(hints);
+-		return NULL;
+-	}
+ 	return hints;
+ }
+ 
++static void hints_stub_free(struct iter_hints_stub* s)
++{
++	if(!s) return;
++	delegpt_free_mlc(s->dp);
++	free(s);
++}
++
++static void delhintnode(rbnode_t* n, void* ATTR_UNUSED(arg))
++{
++	struct iter_hints_stub* node = (struct iter_hints_stub*)n;
++	hints_stub_free(node);
++}
++
++static void hints_del_tree(struct iter_hints* hints)
++{
++	traverse_postorder(&hints->tree, &delhintnode, NULL);
++}
++
+ void 
+ hints_delete(struct iter_hints* hints)
+ {
+ 	if(!hints) 
+ 		return;
+-	regional_destroy(hints->region);
++	hints_del_tree(hints);
+ 	free(hints);
+ }
+ 
+ /** add hint to delegation hints */
+ static int
+-ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
++ah(struct delegpt* dp, const char* sv, const char* ip)
+ {
+ 	struct sockaddr_storage addr;
+ 	socklen_t addrlen;
+@@ -85,9 +97,9 @@
+ 		log_err("could not parse %s", sv);
+ 		return 0;
+ 	}
+-	if(!delegpt_add_ns(dp, r, ldns_rdf_data(rdf), 0) ||
++	if(!delegpt_add_ns_mlc(dp, ldns_rdf_data(rdf), 0) ||
+ 	   !extstrtoaddr(ip, &addr, &addrlen) ||
+-	   !delegpt_add_target(dp, r, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
++	   !delegpt_add_target_mlc(dp, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
+ 		&addr, addrlen, 0, 0)) {
+ 		ldns_rdf_deep_free(rdf);
+ 		return 0;
+@@ -98,7 +110,7 @@
+ 
+ /** obtain compiletime provided root hints */
+ static struct delegpt* 
+-compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
++compile_time_root_prime(int do_ip4, int do_ip6)
+ {
+ 	/* from:
+ 	 ;       This file is made available by InterNIC
+@@ -109,37 +121,35 @@
+ 	 ;
+ 	 ;       related version of root zone:   2010061700
+ 	 */
+-	struct delegpt* dp = delegpt_create(r);
++	struct delegpt* dp = delegpt_create_mlc((uint8_t*)"\000");
+ 	if(!dp)
+ 		return NULL;
+ 	dp->has_parent_side_NS = 1;
+-	if(!delegpt_set_name(dp, r, (uint8_t*)"\000"))
+-		return NULL;
+       if(do_ip4) {
+-	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "198.41.0.4"))	return 0;
+-	if(!ah(dp, r, "B.ROOT-SERVERS.NET.", "192.228.79.201")) return 0;
+-	if(!ah(dp, r, "C.ROOT-SERVERS.NET.", "192.33.4.12"))	return 0;
+-	if(!ah(dp, r, "D.ROOT-SERVERS.NET.", "128.8.10.90"))	return 0;
+-	if(!ah(dp, r, "E.ROOT-SERVERS.NET.", "192.203.230.10")) return 0;
+-	if(!ah(dp, r, "F.ROOT-SERVERS.NET.", "192.5.5.241"))	return 0;
+-	if(!ah(dp, r, "G.ROOT-SERVERS.NET.", "192.112.36.4"))	return 0;
+-	if(!ah(dp, r, "H.ROOT-SERVERS.NET.", "128.63.2.53"))	return 0;
+-	if(!ah(dp, r, "I.ROOT-SERVERS.NET.", "192.36.148.17"))	return 0;
+-	if(!ah(dp, r, "J.ROOT-SERVERS.NET.", "192.58.128.30"))	return 0;
+-	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "193.0.14.129"))	return 0;
+-	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "199.7.83.42"))	return 0;
+-	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "202.12.27.33"))	return 0;
++	if(!ah(dp, "A.ROOT-SERVERS.NET.", "198.41.0.4"))	return 0;
++	if(!ah(dp, "B.ROOT-SERVERS.NET.", "192.228.79.201")) return 0;
++	if(!ah(dp, "C.ROOT-SERVERS.NET.", "192.33.4.12"))	return 0;
++	if(!ah(dp, "D.ROOT-SERVERS.NET.", "128.8.10.90"))	return 0;
++	if(!ah(dp, "E.ROOT-SERVERS.NET.", "192.203.230.10")) return 0;
++	if(!ah(dp, "F.ROOT-SERVERS.NET.", "192.5.5.241"))	return 0;
++	if(!ah(dp, "G.ROOT-SERVERS.NET.", "192.112.36.4"))	return 0;
++	if(!ah(dp, "H.ROOT-SERVERS.NET.", "128.63.2.53"))	return 0;
++	if(!ah(dp, "I.ROOT-SERVERS.NET.", "192.36.148.17"))	return 0;
++	if(!ah(dp, "J.ROOT-SERVERS.NET.", "192.58.128.30"))	return 0;
++	if(!ah(dp, "K.ROOT-SERVERS.NET.", "193.0.14.129"))	return 0;
++	if(!ah(dp, "L.ROOT-SERVERS.NET.", "199.7.83.42"))	return 0;
++	if(!ah(dp, "M.ROOT-SERVERS.NET.", "202.12.27.33"))	return 0;
+       }
+       if(do_ip6) {
+-	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) return 0;
+-	if(!ah(dp, r, "D.ROOT-SERVERS.NET.", "2001:500:2d::d")) return 0;
+-	if(!ah(dp, r, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) return 0;
+-	if(!ah(dp, r, "H.ROOT-SERVERS.NET.", "2001:500:1::803f:235")) return 0;
+-	if(!ah(dp, r, "I.ROOT-SERVERS.NET.", "2001:7fe::53")) return 0;
+-	if(!ah(dp, r, "J.ROOT-SERVERS.NET.", "2001:503:c27::2:30")) return 0;
+-	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "2001:7fd::1")) return 0;
+-	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "2001:500:3::42")) return 0;
+-	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "2001:dc3::35")) return 0;
++	if(!ah(dp, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) return 0;
++	if(!ah(dp, "D.ROOT-SERVERS.NET.", "2001:500:2d::d")) return 0;
++	if(!ah(dp, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) return 0;
++	if(!ah(dp, "H.ROOT-SERVERS.NET.", "2001:500:1::803f:235")) return 0;
++	if(!ah(dp, "I.ROOT-SERVERS.NET.", "2001:7fe::53")) return 0;
++	if(!ah(dp, "J.ROOT-SERVERS.NET.", "2001:503:c27::2:30")) return 0;
++	if(!ah(dp, "K.ROOT-SERVERS.NET.", "2001:7fd::1")) return 0;
++	if(!ah(dp, "L.ROOT-SERVERS.NET.", "2001:500:3::42")) return 0;
++	if(!ah(dp, "M.ROOT-SERVERS.NET.", "2001:dc3::35")) return 0;
+       }
+ 	return dp;
+ }
+@@ -149,51 +159,50 @@
+ hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
+ 	int noprime)
+ {
+-	struct iter_hints_stub* node = regional_alloc(hints->region,
++	struct iter_hints_stub* node = (struct iter_hints_stub*)malloc(
+ 		sizeof(struct iter_hints_stub));
+-	uint8_t* nm;
+-	if(!node)
+-		return 0;
+-	nm = regional_alloc_init(hints->region, dp->name, dp->namelen);
+-	if(!nm)
++	if(!node) {
++		delegpt_free_mlc(dp);
+ 		return 0;
++	}
+ 	node->dp = dp;
+ 	node->noprime = (uint8_t)noprime;
+-	if(!name_tree_insert(&hints->tree, &node->node, nm, dp->namelen,
++	if(!name_tree_insert(&hints->tree, &node->node, dp->name, dp->namelen,
+ 		dp->namelabs, c)) {
+ 		log_err("second hints ignored.");
++		delegpt_free_mlc(dp);
++		free(node);
+ 	}
+ 	return 1;
+ }
+ 
+ /** set stub name */
+-static int 
+-read_stubs_name(struct iter_hints* hints, struct config_stub* s, 
+-	struct delegpt* dp)
++static struct delegpt* 
++read_stubs_name(struct config_stub* s)
+ {
++	struct delegpt* dp;
+ 	ldns_rdf* rdf;
+ 	if(!s->name) {
+ 		log_err("stub zone without a name");
+-		return 0;
++		return NULL;
+ 	}
+ 	rdf = ldns_dname_new_frm_str(s->name);
+ 	if(!rdf) {
+ 		log_err("cannot parse stub zone name %s", s->name);
+-		return 0;
++		return NULL;
+ 	}
+-	if(!delegpt_set_name(dp, hints->region, ldns_rdf_data(rdf))) {
++	if(!(dp=delegpt_create_mlc(ldns_rdf_data(rdf)))) {
+ 		ldns_rdf_deep_free(rdf);
+ 		log_err("out of memory");
+-		return 0;
++		return NULL;
+ 	}
+ 	ldns_rdf_deep_free(rdf);
+-	return 1;
++	return dp;
+ }
+ 
+ /** set stub host names */
+ static int 
+-read_stubs_host(struct iter_hints* hints, struct config_stub* s, 
+-	struct delegpt* dp)
++read_stubs_host(struct config_stub* s, struct delegpt* dp)
+ {
+ 	struct config_strlist* p;
+ 	ldns_rdf* rdf;
+@@ -205,7 +214,7 @@
+ 				s->name, p->str);
+ 			return 0;
+ 		}
+-		if(!delegpt_add_ns(dp, hints->region, ldns_rdf_data(rdf), 0)) {
++		if(!delegpt_add_ns_mlc(dp, ldns_rdf_data(rdf), 0)) {
+ 			ldns_rdf_deep_free(rdf);
+ 			log_err("out of memory");
+ 			return 0;
+@@ -217,8 +226,7 @@
+ 
+ /** set stub server addresses */
+ static int 
+-read_stubs_addr(struct iter_hints* hints, struct config_stub* s, 
+-	struct delegpt* dp)
++read_stubs_addr(struct config_stub* s, struct delegpt* dp)
+ {
+ 	struct config_strlist* p;
+ 	struct sockaddr_storage addr;
+@@ -230,7 +238,7 @@
+ 				s->name, p->str);
+ 			return 0;
+ 		}
+-		if(!delegpt_add_addr(dp, hints->region, &addr, addrlen, 0, 0)) {
++		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
+ 			log_err("out of memory");
+ 			return 0;
+ 		}
+@@ -243,17 +251,13 @@
+ read_stubs(struct iter_hints* hints, struct config_file* cfg)
+ {
+ 	struct config_stub* s;
++	struct delegpt* dp;
+ 	for(s = cfg->stubs; s; s = s->next) {
+-		struct delegpt* dp = delegpt_create(hints->region);
+-		if(!dp) {
+-			log_err("out of memory");
++		if(!(dp=read_stubs_name(s)) ||
++			!read_stubs_host(s, dp) ||
++			!read_stubs_addr(s, dp))
+ 			return 0;
+-		}
+ 		dp->has_parent_side_NS = 1;
+-		if(!read_stubs_name(hints, s, dp) ||
+-			!read_stubs_host(hints, s, dp) ||
+-			!read_stubs_addr(hints, s, dp))
+-			return 0;
+ 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, !s->isprime))
+ 			return 0;
+ 		delegpt_log(VERB_QUERY, dp);
+@@ -279,7 +283,7 @@
+ 			fname, strerror(errno));
+ 		return 0;
+ 	}
+-	dp = delegpt_create(hints->region);
++	dp = delegpt_create_mlc(NULL);
+ 	if(!dp) {
+ 		log_err("out of memory reading root hints");
+ 		fclose(f);
+@@ -300,14 +304,14 @@
+ 			goto stop_read;
+ 		}
+ 		if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
+-			if(!delegpt_add_ns(dp, hints->region,
++			if(!delegpt_add_ns_mlc(dp,
+ 				ldns_rdf_data(ldns_rr_rdf(rr, 0)), 0)) {
+ 				log_err("out of memory reading root hints");
+ 				goto stop_read;
+ 			}
+ 			c = ldns_rr_get_class(rr);
+ 			if(!dp->name) {
+-				if(!delegpt_set_name(dp, hints->region, 
++				if(!delegpt_set_name_mlc(dp,
+ 					ldns_rdf_data(ldns_rr_owner(rr)))){
+ 					log_err("out of memory.");
+ 					goto stop_read;
+@@ -321,7 +325,7 @@
+ 			sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+ 			memmove(&sa.sin_addr, 
+ 				ldns_rdf_data(ldns_rr_rdf(rr, 0)), INET_SIZE);
+-			if(!delegpt_add_target(dp, hints->region,
++			if(!delegpt_add_target_mlc(dp,
+ 					ldns_rdf_data(ldns_rr_owner(rr)),
+ 					ldns_rdf_size(ldns_rr_owner(rr)),
+ 					(struct sockaddr_storage*)&sa, len, 
+@@ -337,7 +341,7 @@
+ 			sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+ 			memmove(&sa.sin6_addr, 
+ 				ldns_rdf_data(ldns_rr_rdf(rr, 0)), INET6_SIZE);
+-			if(!delegpt_add_target(dp, hints->region,
++			if(!delegpt_add_target_mlc(dp,
+ 					ldns_rdf_data(ldns_rr_owner(rr)),
+ 					ldns_rdf_size(ldns_rr_owner(rr)),
+ 					(struct sockaddr_storage*)&sa, len,
+@@ -360,6 +364,7 @@
+ 	fclose(f);
+ 	if(!dp->name) {
+ 		log_warn("root hints %s: no NS content", fname);
++		delegpt_free_mlc(dp);
+ 		return 1;
+ 	}
+ 	if(!hints_insert(hints, c, dp, 0)) {
+@@ -373,6 +378,7 @@
+ 		ldns_rdf_deep_free(origin);
+ 	if (prev_rr)
+ 		ldns_rdf_deep_free(prev_rr);
++	delegpt_free_mlc(dp);
+ 	fclose(f);
+ 	return 0;
+ }
+@@ -400,7 +406,7 @@
+ int 
+ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
+ {
+-	regional_free_all(hints->region);
++	hints_del_tree(hints);
+ 	name_tree_init(&hints->tree);
+ 	
+ 	/* read root hints */
+@@ -413,8 +419,8 @@
+ 
+ 	/* use fallback compiletime root hints */
+ 	if(!hints_lookup_root(hints, LDNS_RR_CLASS_IN)) {
+-		struct delegpt* dp = compile_time_root_prime(hints->region,
+-			cfg->do_ip4, cfg->do_ip6);
++		struct delegpt* dp = compile_time_root_prime(cfg->do_ip4,
++			cfg->do_ip6);
+ 		verbose(VERB_ALGO, "no config, using builtin root hints.");
+ 		if(!dp) 
+ 			return 0;
+@@ -483,6 +489,43 @@
+ size_t 
+ hints_get_mem(struct iter_hints* hints)
+ {
++	size_t s;
++	struct iter_hints_stub* p;
+ 	if(!hints) return 0;
+-	return sizeof(*hints) + regional_get_mem(hints->region);
++	s = sizeof(*hints);
++	RBTREE_FOR(p, struct iter_hints_stub*, &hints->tree) {
++		s += sizeof(*p) + delegpt_get_mem(p->dp);
++	}
++	return s;
+ }
++
++int 
++hints_add_stub(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
++	int noprime)
++{
++	struct iter_hints_stub *z;
++	if((z=(struct iter_hints_stub*)name_tree_find(&hints->tree,
++		dp->name, dp->namelen, dp->namelabs, c)) != NULL) {
++		(void)rbtree_delete(&hints->tree, &z->node);
++		hints_stub_free(z);
++	}
++	if(!hints_insert(hints, c, dp, noprime))
++		return 0;
++	name_tree_init_parents(&hints->tree);
++	return 1;
++}
++
++void 
++hints_delete_stub(struct iter_hints* hints, uint16_t c, uint8_t* nm)
++{
++	struct iter_hints_stub *z;
++	size_t len;
++	int labs = dname_count_size_labels(nm, &len);
++	if(!(z=(struct iter_hints_stub*)name_tree_find(&hints->tree,
++		nm, len, labs, c)))
++		return; /* nothing to do */
++	(void)rbtree_delete(&hints->tree, &z->node);
++	hints_stub_free(z);
++	name_tree_init_parents(&hints->tree);
++}
++
+diff -Naur unbound-1.4.16/iterator/iter_hints.h unbound-trunk/iterator/iter_hints.h
+--- unbound-1.4.16/iterator/iter_hints.h	2010-07-07 09:13:36.000000000 -0400
++++ unbound-trunk/iterator/iter_hints.h	2012-02-22 20:37:15.042368186 -0500
+@@ -46,14 +46,11 @@
+ struct iter_env;
+ struct config_file;
+ struct delegpt;
+-struct regional;
+ 
+ /**
+  * Iterator hints structure
+  */
+ struct iter_hints {
+-	/** regional where hints are allocated */
+-	struct regional* region;
+ 	/** 
+ 	 * Hints are stored in this tree. Sort order is specially chosen.
+ 	 * first sorted on qclass. Then on dname in nsec-like order, so that
+@@ -71,7 +68,7 @@
+ struct iter_hints_stub {
+ 	/** tree sorted by name, class */
+ 	struct name_tree_node node;
+-	/** delegation point with hint information for this stub. */
++	/** delegation point with hint information for this stub. malloced. */
+ 	struct delegpt* dp;
+ 	/** does the stub need to forego priming (like on other ports) */
+ 	uint8_t noprime;
+@@ -139,4 +136,26 @@
+  */
+ size_t hints_get_mem(struct iter_hints* hints);
+ 
++/**
++ * Add stub to hints structure. For external use since it recalcs 
++ * the tree parents.
++ * @param hints: the hints data structure
++ * @param c: class of zone
++ * @param dp: delegation point with name and target nameservers for new
++ *	hints stub. malloced.
++ * @param noprime: set noprime option to true or false on new hint stub.
++ * @return false on failure (out of memory);
++ */
++int hints_add_stub(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
++	int noprime);
++
++/**
++ * Remove stub from hints structure. For external use since it 
++ * recalcs the tree parents.
++ * @param hints: the hints data structure
++ * @param c: class of stub zone
++ * @param nm: name of stub zone (in uncompressed wireformat).
++ */
++void hints_delete_stub(struct iter_hints* hints, uint16_t c, uint8_t* nm);
++
+ #endif /* ITERATOR_ITER_HINTS_H */
+diff -Naur unbound-1.4.16/iterator/iter_utils.c unbound-trunk/iterator/iter_utils.c
+--- unbound-1.4.16/iterator/iter_utils.c	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/iterator/iter_utils.c	2012-02-22 20:37:15.042368186 -0500
+@@ -113,12 +113,6 @@
+ 		verbose(VERB_QUERY, "target fetch policy for level %d is %d",
+ 			i, iter_env->target_fetch_policy[i]);
+ 	
+-	if(!iter_env->hints)
+-		iter_env->hints = hints_create();
+-	if(!iter_env->hints || !hints_apply_cfg(iter_env->hints, cfg)) {
+-		log_err("Could not set root or stub hints");
+-		return 0;
+-	}
+ 	if(!iter_env->donotq)
+ 		iter_env->donotq = donotq_create();
+ 	if(!iter_env->donotq || !donotq_apply_cfg(iter_env->donotq, cfg)) {
+@@ -425,11 +419,11 @@
+ 
+ int 
+ iter_dns_store(struct module_env* env, struct query_info* msgqinf,
+-	struct reply_info* msgrep, int is_referral, uint32_t leeway,
++	struct reply_info* msgrep, int is_referral, uint32_t leeway, int pside,
+ 	struct regional* region)
+ {
+ 	return dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
+-		region);
++		pside, region);
+ }
+ 
+ int 
+diff -Naur unbound-1.4.16/iterator/iter_utils.h unbound-trunk/iterator/iter_utils.h
+--- unbound-1.4.16/iterator/iter_utils.h	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/iterator/iter_utils.h	2012-02-22 20:37:15.042368186 -0500
+@@ -121,11 +121,13 @@
+  * @param is_referral: If true, then the given message to be stored is a
+  *	referral. The cache implementation may use this as a hint.
+  * @param leeway: prefetch TTL leeway to expire old rrsets quicker.
++ * @param pside: true if dp is parentside, thus message is 'fresh' and NS
++ * 	can be prefetch-updates.
+  * @param region: to copy modified (cache is better) rrs back to.
+  * @return 0 on alloc error (out of memory).
+  */
+ int iter_dns_store(struct module_env* env, struct query_info* qinf,
+-	struct reply_info* rep, int is_referral, uint32_t leeway,
++	struct reply_info* rep, int is_referral, uint32_t leeway, int pside,
+ 	struct regional* region);
+ 
+ /**
+diff -Naur unbound-1.4.16/libunbound/libworker.c unbound-trunk/libunbound/libworker.c
+--- unbound-1.4.16/libunbound/libworker.c	2012-01-10 10:07:16.000000000 -0500
++++ unbound-trunk/libunbound/libworker.c	2012-02-22 20:37:15.600368186 -0500
+@@ -66,6 +66,7 @@
+ #include "util/data/msgencode.h"
+ #include "util/tube.h"
+ #include "iterator/iter_fwd.h"
++#include "iterator/iter_hints.h"
+ 
+ /** handle new query command for bg worker */
+ static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
+@@ -83,6 +84,7 @@
+ 		ldns_buffer_free(w->env->scratch_buffer);
+ 		regional_destroy(w->env->scratch);
+ 		forwards_delete(w->env->fwds);
++		hints_delete(w->env->hints);
+ 		ub_randfree(w->env->rnd);
+ 		free(w->env);
+ 	}
+@@ -127,17 +129,24 @@
+ 		forwards_delete(w->env->fwds);
+ 		w->env->fwds = NULL;
+ 	}
++	w->env->hints = hints_create();
++	if(w->env->hints && !hints_apply_cfg(w->env->hints, cfg)) { 
++		hints_delete(w->env->hints);
++		w->env->hints = NULL;
++	}
+ 	if(cfg->ssl_upstream) {
+ 		w->sslctx = connect_sslctx_create(NULL, NULL, NULL);
+ 		if(!w->sslctx) {
+-			libworker_delete(w);
+-			return NULL;
++			/* to make the setup fail after unlock */
++			hints_delete(w->env->hints);
++			w->env->hints = NULL;
+ 		}
+ 	}
+ 	if(!w->is_bg || w->is_bg_thread) {
+ 		lock_basic_unlock(&ctx->cfglock);
+ 	}
+-	if(!w->env->scratch || !w->env->scratch_buffer || !w->env->fwds) {
++	if(!w->env->scratch || !w->env->scratch_buffer || !w->env->fwds ||
++		!w->env->hints) {
+ 		libworker_delete(w);
+ 		return NULL;
+ 	}
+diff -Naur unbound-1.4.16/pythonmod/pythonmod_utils.c unbound-trunk/pythonmod/pythonmod_utils.c
+--- unbound-1.4.16/pythonmod/pythonmod_utils.c	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/pythonmod/pythonmod_utils.c	2012-02-22 20:37:12.805368182 -0500
+@@ -66,7 +66,7 @@
+     }
+ 
+     return dns_cache_store(qstate->env, qinfo, msgrep, is_referral, 
+-	qstate->prefetch_leeway, NULL);
++	qstate->prefetch_leeway, 0, NULL);
+ }
+ 
+ /*  Invalidate the message associated with query_info stored in message cache */
+diff -Naur unbound-1.4.16/services/cache/dns.c unbound-trunk/services/cache/dns.c
+--- unbound-1.4.16/services/cache/dns.c	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/services/cache/dns.c	2012-02-22 20:37:14.065368184 -0500
+@@ -55,12 +55,20 @@
+  * @param env: module environment with caches.
+  * @param rep: contains list of rrsets to store.
+  * @param now: current time.
++ * @param leeway: during prefetch how much leeway to update TTLs.
++ * 	This makes rrsets (other than type NS) timeout sooner so they get
++ * 	updated with a new full TTL.
++ * 	Type NS does not get this, because it must not be refreshed from the
++ * 	child domain, but keep counting down properly.
++ * @param pside: if from parentside discovered NS, so that its NS is okay
++ * 	in a prefetch situation to be updated (without becoming sticky).
+  * @param qrep: update rrsets here if cache is better
+  * @param region: for qrep allocs.
+  */
+ static void
+ store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
+-	struct reply_info* qrep, struct regional* region)
++	uint32_t leeway, int pside, struct reply_info* qrep,
++	struct regional* region)
+ {
+         size_t i;
+         /* see if rrset already exists in cache, if not insert it. */
+@@ -69,7 +77,8 @@
+                 rep->ref[i].id = rep->rrsets[i]->id;
+ 		/* update ref if it was in the cache */ 
+ 		switch(rrset_cache_update(env->rrset_cache, &rep->ref[i],
+-                        env->alloc, now)) {
++                        env->alloc, now + ((ntohs(rep->ref[i].key->rk.type)==
++			LDNS_RR_TYPE_NS && !pside)?0:leeway))) {
+ 		case 0: /* ref unchanged, item inserted */
+ 			break;
+ 		case 2: /* ref updated, cache is superior */
+@@ -96,7 +105,7 @@
+ 
+ void 
+ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
+-	hashvalue_t hash, struct reply_info* rep, uint32_t leeway,
++	hashvalue_t hash, struct reply_info* rep, uint32_t leeway, int pside,
+ 	struct reply_info* qrep, struct regional* region)
+ {
+ 	struct msgreply_entry* e;
+@@ -112,7 +121,7 @@
+ 	/* there was a reply_info_sortref(rep) here but it seems to be
+ 	 * unnecessary, because the cache gets locked per rrset. */
+ 	reply_info_set_ttls(rep, *env->now);
+-	store_rrsets(env, rep, *env->now+leeway, qrep, region);
++	store_rrsets(env, rep, *env->now, leeway, pside, qrep, region);
+ 	if(ttl == 0) {
+ 		/* we do not store the message, but we did store the RRs,
+ 		 * which could be useful for delegation information */
+@@ -730,7 +739,7 @@
+ 
+ int 
+ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
+-        struct reply_info* msgrep, int is_referral, uint32_t leeway,
++        struct reply_info* msgrep, int is_referral, uint32_t leeway, int pside,
+ 	struct regional* region)
+ {
+ 	struct reply_info* rep = NULL;
+@@ -752,8 +761,11 @@
+ 			ref.key = rep->rrsets[i];
+ 			ref.id = rep->rrsets[i]->id;
+ 			/*ignore ret: it was in the cache, ref updated */
++			/* no leeway for typeNS */
+ 			(void)rrset_cache_update(env->rrset_cache, &ref, 
+-				env->alloc, *env->now + leeway);
++				env->alloc, *env->now + 
++				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
++				 && !pside) ? 0:leeway));
+ 		}
+ 		free(rep);
+ 		return 1;
+@@ -774,7 +786,8 @@
+ 		rep->flags |= (BIT_RA | BIT_QR);
+ 		rep->flags &= ~(BIT_AA | BIT_CD);
+ 		h = query_info_hash(&qinf);
+-		dns_cache_store_msg(env, &qinf, h, rep, leeway, msgrep, region);
++		dns_cache_store_msg(env, &qinf, h, rep, leeway, pside, msgrep,
++			region);
+ 		/* qname is used inside query_info_entrysetup, and set to 
+ 		 * NULL. If it has not been used, free it. free(0) is safe. */
+ 		free(qinf.qname);
+diff -Naur unbound-1.4.16/services/cache/dns.h unbound-trunk/services/cache/dns.h
+--- unbound-1.4.16/services/cache/dns.h	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/services/cache/dns.h	2012-02-22 20:37:14.066368184 -0500
+@@ -74,12 +74,15 @@
+  *      It will store only the RRsets, not the message.
+  * @param leeway: TTL value, if not 0, other rrsets are considered expired
+  *	that many seconds before actual TTL expiry.
++ * @param pside: if true, information came from a server which was fetched
++ * 	from the parentside of the zonecut.  This means that the type NS
++ * 	can be updated to full TTL even in prefetch situations.
+  * @param region: region to allocate better entries from cache into.
+  *   (used when is_referral is false).
+  * @return 0 on alloc error (out of memory).
+  */
+ int dns_cache_store(struct module_env* env, struct query_info* qinf,
+-        struct reply_info* rep, int is_referral, uint32_t leeway,
++        struct reply_info* rep, int is_referral, uint32_t leeway, int pside,
+ 	struct regional* region); 
+ 
+ /**
+@@ -95,11 +98,14 @@
+  *	Adjusts the reply info TTLs to absolute time.
+  * @param leeway: TTL value, if not 0, other rrsets are considered expired
+  *	that many seconds before actual TTL expiry.
++ * @param pside: if true, information came from a server which was fetched
++ * 	from the parentside of the zonecut.  This means that the type NS
++ * 	can be updated to full TTL even in prefetch situations.
+  * @param qrep: message that can be altered with better rrs from cache.
+  * @param region: to allocate into for qmsg.
+  */
+ void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
+-	hashvalue_t hash, struct reply_info* rep, uint32_t leeway,
++	hashvalue_t hash, struct reply_info* rep, uint32_t leeway, int pside,
+ 	struct reply_info* qrep, struct regional* region);
+ 
+ /**
+diff -Naur unbound-1.4.16/services/cache/infra.c unbound-trunk/services/cache/infra.c
+--- unbound-1.4.16/services/cache/infra.c	2012-01-10 10:07:16.000000000 -0500
++++ unbound-trunk/services/cache/infra.c	2012-02-22 20:37:14.063368184 -0500
+@@ -52,6 +52,11 @@
+ /** Timeout when only a single probe query per IP is allowed. */
+ #define PROBE_MAXRTO 12000 /* in msec */
+ 
++/** number of timeouts for a type when the domain can be blocked ;
++ * even if another type has completely rtt maxed it, the different type
++ * can do this number of packets (until those all timeout too) */
++#define TIMEOUT_COUNT_MAX 3
++
+ size_t 
+ infra_sizefunc(void* k, void* ATTR_UNUSED(d))
+ {
+@@ -196,6 +201,9 @@
+ 	data->rec_lame = 0;
+ 	data->lame_type_A = 0;
+ 	data->lame_other = 0;
++	data->timeout_A = 0;
++	data->timeout_AAAA = 0;
++	data->timeout_other = 0;
+ }
+ 
+ /** 
+@@ -250,6 +258,9 @@
+ 	if(e && ((struct infra_data*)e->data)->ttl < timenow) {
+ 		/* it expired, try to reuse existing entry */
+ 		int old = ((struct infra_data*)e->data)->rtt.rto;
++		uint8_t tA = ((struct infra_data*)e->data)->timeout_A;
++		uint8_t tAAAA = ((struct infra_data*)e->data)->timeout_AAAA;
++		uint8_t tother = ((struct infra_data*)e->data)->timeout_other;
+ 		lock_rw_unlock(&e->lock);
+ 		e = infra_lookup_nottl(infra, addr, addrlen, nm, nmlen, 1);
+ 		if(e) {
+@@ -259,9 +270,13 @@
+ 			data_entry_init(infra, e, timenow);
+ 			wr = 1;
+ 			/* TOP_TIMEOUT remains on reuse */
+-			if(old >= USEFUL_SERVER_TOP_TIMEOUT)
++			if(old >= USEFUL_SERVER_TOP_TIMEOUT) {
+ 				((struct infra_data*)e->data)->rtt.rto
+ 					= USEFUL_SERVER_TOP_TIMEOUT;
++				((struct infra_data*)e->data)->timeout_A = tA;
++				((struct infra_data*)e->data)->timeout_AAAA = tAAAA;
++				((struct infra_data*)e->data)->timeout_other = tother;
++			}
+ 		}
+ 	}
+ 	if(!e) {
+@@ -358,8 +373,8 @@
+ 
+ int 
+ infra_rtt_update(struct infra_cache* infra, struct sockaddr_storage* addr,
+-	socklen_t addrlen, uint8_t* nm, size_t nmlen, int roundtrip,
+-	int orig_rtt, uint32_t timenow)
++	socklen_t addrlen, uint8_t* nm, size_t nmlen, int qtype,
++	int roundtrip, int orig_rtt, uint32_t timenow)
+ {
+ 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+ 		nm, nmlen, 1);
+@@ -377,9 +392,24 @@
+ 	data = (struct infra_data*)e->data;
+ 	if(roundtrip == -1) {
+ 		rtt_lost(&data->rtt, orig_rtt);
++		if(qtype == LDNS_RR_TYPE_A) {
++			if(data->timeout_A < TIMEOUT_COUNT_MAX)
++				data->timeout_A++;
++		} else if(qtype == LDNS_RR_TYPE_AAAA) {
++			if(data->timeout_AAAA < TIMEOUT_COUNT_MAX)
++				data->timeout_AAAA++;
++		} else {
++			if(data->timeout_other < TIMEOUT_COUNT_MAX)
++				data->timeout_other++;
++		}
+ 	} else {
+ 		rtt_update(&data->rtt, roundtrip);
+ 		data->probedelay = 0;
++		if(qtype == LDNS_RR_TYPE_A)
++			data->timeout_A = 0;
++		else if(qtype == LDNS_RR_TYPE_AAAA)
++			data->timeout_AAAA = 0;
++		else	data->timeout_other = 0;
+ 	}
+ 	if(data->rtt.rto > 0)
+ 		rto = data->rtt.rto;
+@@ -392,7 +422,8 @@
+ 
+ int infra_get_host_rto(struct infra_cache* infra,
+         struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* nm,
+-	size_t nmlen, struct rtt_info* rtt, int* delay, uint32_t timenow)
++	size_t nmlen, struct rtt_info* rtt, int* delay, uint32_t timenow,
++	int* tA, int* tAAAA, int* tother)
+ {
+ 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+ 		nm, nmlen, 0);
+@@ -407,6 +438,9 @@
+ 			*delay = (int)(data->probedelay - timenow);
+ 		else	*delay = 0;
+ 	}
++	*tA = (int)data->timeout_A;
++	*tAAAA = (int)data->timeout_AAAA;
++	*tother = (int)data->timeout_other;
+ 	lock_rw_unlock(&e->lock);
+ 	return ttl;
+ }
+@@ -456,20 +490,34 @@
+ 	host = (struct infra_data*)e->data;
+ 	*rtt = rtt_unclamped(&host->rtt);
+ 	if(host->rtt.rto >= PROBE_MAXRTO && timenow < host->probedelay
+-		&& rtt_notimeout(&host->rtt)*4 <= host->rtt.rto)
++		&& rtt_notimeout(&host->rtt)*4 <= host->rtt.rto) {
+ 		/* single probe for this domain, and we are not probing */
+-		*rtt = USEFUL_SERVER_TOP_TIMEOUT;
++		/* unless the query type allows a probe to happen */
++		if(qtype == LDNS_RR_TYPE_A) {
++			if(host->timeout_A >= TIMEOUT_COUNT_MAX)
++				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
++			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
++		} else if(qtype == LDNS_RR_TYPE_AAAA) {
++			if(host->timeout_AAAA >= TIMEOUT_COUNT_MAX)
++				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
++			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
++		} else {
++			if(host->timeout_other >= TIMEOUT_COUNT_MAX)
++				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
++			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
++		}
++	}
+ 	if(timenow > host->ttl) {
+ 		/* expired entry */
+ 		/* see if this can be a re-probe of an unresponsive server */
+ 		/* minus 1000 because that is outside of the RTTBAND, so
+ 		 * blacklisted servers stay blacklisted if this is chosen */
+ 		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
++			lock_rw_unlock(&e->lock);
+ 			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+ 			*lame = 0;
+ 			*dnsseclame = 0;
+ 			*reclame = 0;
+-			lock_rw_unlock(&e->lock);
+ 			return 1;
+ 		}
+ 		lock_rw_unlock(&e->lock);
+diff -Naur unbound-1.4.16/services/cache/infra.h unbound-trunk/services/cache/infra.h
+--- unbound-1.4.16/services/cache/infra.h	2011-10-26 11:46:23.000000000 -0400
++++ unbound-trunk/services/cache/infra.h	2012-02-22 20:37:14.065368184 -0500
+@@ -91,6 +91,13 @@
+ 	uint8_t lame_type_A;
+ 	/** the host is lame (not authoritative) for other query types */
+ 	uint8_t lame_other;
++
++	/** timeouts counter for type A */
++	uint8_t timeout_A;
++	/** timeouts counter for type AAAA */
++	uint8_t timeout_AAAA;
++	/** timeouts counter for others */
++	uint8_t timeout_other;
+ };
+ 
+ /**
+@@ -195,6 +202,7 @@
+  * @param addrlen: length of addr.
+  * @param name: zone name
+  * @param namelen: zone name length
++ * @param qtype: query type.
+  * @param roundtrip: estimate of roundtrip time in milliseconds or -1 for 
+  * 	timeout.
+  * @param orig_rtt: original rtt for the query that timed out (roundtrip==-1).
+@@ -203,7 +211,7 @@
+  * @return: 0 on error. new rto otherwise.
+  */
+ int infra_rtt_update(struct infra_cache* infra, struct sockaddr_storage* addr,
+-	socklen_t addrlen, uint8_t* name, size_t namelen,
++	socklen_t addrlen, uint8_t* name, size_t namelen, int qtype,
+ 	int roundtrip, int orig_rtt, uint32_t timenow);
+ 
+ /**
+@@ -267,12 +275,16 @@
+  * @param rtt: the rtt_info is copied into here (caller alloced return struct).
+  * @param delay: probe delay (if any).
+  * @param timenow: what time it is now.
++ * @param tA: timeout counter on type A.
++ * @param tAAAA: timeout counter on type AAAA.
++ * @param tother: timeout counter on type other.
+  * @return TTL the infra host element is valid for. If -1: not found in cache.
+  *	TTL -2: found but expired.
+  */
+ int infra_get_host_rto(struct infra_cache* infra,
+         struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* name,
+-	size_t namelen, struct rtt_info* rtt, int* delay, uint32_t timenow);
++	size_t namelen, struct rtt_info* rtt, int* delay, uint32_t timenow,
++	int* tA, int* tAAAA, int* tother);
+ 
+ /**
+  * Get memory used by the infra cache.
+diff -Naur unbound-1.4.16/services/outside_network.c unbound-trunk/services/outside_network.c
+--- unbound-1.4.16/services/outside_network.c	2011-12-24 06:27:53.000000000 -0500
++++ unbound-trunk/services/outside_network.c	2012-02-22 20:37:14.106368184 -0500
+@@ -1166,7 +1166,7 @@
+ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
+ 	int want_dnssec, int tcp_upstream, int ssl_upstream,
+ 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+-	size_t zonelen)
++	size_t zonelen, int qtype)
+ {
+ 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
+ #ifdef UNBOUND_DEBUG
+@@ -1188,6 +1188,7 @@
+ 		return NULL;
+ 	}
+ 	sq->zonelen = zonelen;
++	sq->qtype = qtype;
+ 	sq->dnssec = dnssec;
+ 	sq->want_dnssec = want_dnssec;
+ 	sq->tcp_upstream = tcp_upstream;
+@@ -1566,8 +1567,8 @@
+ 		 * huge due to system-hibernated and we woke up */
+ 		if(roundtime < TCP_AUTH_QUERY_TIMEOUT*1000) {
+ 		    if(!infra_rtt_update(sq->outnet->infra, &sq->addr,
+-			sq->addrlen, sq->zone, sq->zonelen, roundtime,
+-			sq->last_rtt, (uint32_t)now.tv_sec))
++			sq->addrlen, sq->zone, sq->zonelen, sq->qtype,
++			roundtime, sq->last_rtt, (uint32_t)now.tv_sec))
+ 			log_err("out of memory noting rtt.");
+ 		}
+ 	    }
+@@ -1658,7 +1659,7 @@
+ 		}
+ 		sq->retry++;
+ 		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
+-			sq->zone, sq->zonelen, -1, sq->last_rtt,
++			sq->zone, sq->zonelen, sq->qtype, -1, sq->last_rtt,
+ 			(uint32_t)now.tv_sec)))
+ 			log_err("out of memory in UDP exponential backoff");
+ 		if(sq->retry < OUTBOUND_UDP_RETRY) {
+@@ -1752,8 +1753,8 @@
+ 		 * above this value gives trouble with server selection */
+ 		if(roundtime < 60000) {
+ 		    if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
+-			sq->zone, sq->zonelen, roundtime, sq->last_rtt,
+-			(uint32_t)now.tv_sec))
++			sq->zone, sq->zonelen, sq->qtype, roundtime,
++			sq->last_rtt, (uint32_t)now.tv_sec))
+ 			log_err("out of memory noting rtt.");
+ 		}
+ 	    }
+@@ -1814,7 +1815,7 @@
+ 		/* make new serviced query entry */
+ 		sq = serviced_create(outnet, buff, dnssec, want_dnssec,
+ 			tcp_upstream, ssl_upstream, addr, addrlen, zone,
+-			zonelen);
++			zonelen, (int)qtype);
+ 		if(!sq) {
+ 			free(cb);
+ 			return NULL;
+diff -Naur unbound-1.4.16/services/outside_network.h unbound-trunk/services/outside_network.h
+--- unbound-1.4.16/services/outside_network.h	2011-11-01 06:18:56.000000000 -0400
++++ unbound-trunk/services/outside_network.h	2012-02-22 20:37:14.107368184 -0500
+@@ -312,6 +312,8 @@
+ 	uint8_t* zone;
+ 	/** length of zone name */
+ 	size_t zonelen;
++	/** qtype */
++	int qtype;
+ 	/** current status */
+ 	enum serviced_query_status {
+ 		/** initial status */
+diff -Naur unbound-1.4.16/smallapp/unbound-checkconf.c unbound-trunk/smallapp/unbound-checkconf.c
+--- unbound-1.4.16/smallapp/unbound-checkconf.c	2011-08-26 02:50:23.000000000 -0400
++++ unbound-trunk/smallapp/unbound-checkconf.c	2012-02-22 20:37:16.189368186 -0500
+@@ -50,6 +50,7 @@
+ #include "util/regional.h"
+ #include "iterator/iterator.h"
+ #include "iterator/iter_fwd.h"
++#include "iterator/iter_hints.h"
+ #include "validator/validator.h"
+ #include "services/localzone.h"
+ #ifdef HAVE_GETOPT_H
+@@ -434,6 +435,17 @@
+ 	forwards_delete(fwd);
+ }
+ 
++/** check hints */
++static void
++check_hints(struct config_file* cfg)
++{
++	struct iter_hints* hints = hints_create();
++	if(!hints || !hints_apply_cfg(hints, cfg)) {
++		fatal_exit("Could not set root or stub hints");
++	}
++	hints_delete(hints);
++}
++
+ /** check config file */
+ static void
+ checkconf(const char* cfgfile, const char* opt)
+@@ -454,6 +466,7 @@
+ 		check_mod(cfg, pythonmod_get_funcblock());
+ #endif
+ 	check_fwd(cfg);
++	check_hints(cfg);
+ 	if(opt) print_option(cfg, opt);
+ 	else	printf("unbound-checkconf: no errors in %s\n", cfgfile);
+ 	config_delete(cfg);
+diff -Naur unbound-1.4.16/smallapp/unbound-control.c unbound-trunk/smallapp/unbound-control.c
+--- unbound-1.4.16/smallapp/unbound-control.c	2011-06-10 06:11:38.000000000 -0400
++++ unbound-trunk/smallapp/unbound-control.c	2012-02-22 20:37:16.188368186 -0500
+@@ -104,6 +104,12 @@
+ 	printf("  list_forwards			list forward-zones in use\n");
+ 	printf("  list_local_zones		list local-zones in use\n");
+ 	printf("  list_local_data		list local-data RRs in use\n");
++	printf("  forward_add [+i] zone addr..	add forward-zone with servers\n");
++	printf("  forward_remove [+i] zone	remove forward zone\n");
++	printf("  stub_add [+ip] zone addr..	add stub-zone with servers\n");
++	printf("  stub_remove [+i] zone		remove stub zone\n");
++	printf("		+i		also do dnssec insecure point\n");
++	printf("		+p		set stub to use priming\n");
+ 	printf("  forward [off | addr ...]	without arg show forward setup\n");
+ 	printf("				or off to turn off root forwarding\n");
+ 	printf("				or give list of ip addresses\n");
+diff -Naur unbound-1.4.16/testcode/fake_event.c unbound-trunk/testcode/fake_event.c
+--- unbound-1.4.16/testcode/fake_event.c	2011-11-01 06:18:56.000000000 -0400
++++ unbound-trunk/testcode/fake_event.c	2012-02-22 20:37:22.995368196 -0500
+@@ -147,6 +147,7 @@
+ {
+ 	if(!pend)
+ 		return;
++	free(pend->zone);
+ 	ldns_buffer_free(pend->buffer);
+ 	ldns_pkt_free(pend->pkt);
+ 	free(pend);
+@@ -554,7 +555,7 @@
+ 	if(!dp) fatal_exit("cannot parse %s", now->variable);
+ 	rto = infra_rtt_update(runtime->infra, &now->addr,
+ 		now->addrlen, ldns_rdf_data(dp), ldns_rdf_size(dp),
+-		atoi(now->string), -1, runtime->now_secs);
++		LDNS_RR_TYPE_A, atoi(now->string), -1, runtime->now_secs);
+ 	log_addr(0, "INFRA_RTT for", &now->addr, now->addrlen);
+ 	log_info("INFRA_RTT(%s roundtrip %d): rto of %d", now->variable,
+ 		atoi(now->string), rto);
+@@ -562,6 +563,24 @@
+ 	ldns_rdf_deep_free(dp);
+ }
+ 
++/** perform exponential backoff on the timout */
++static void
++expon_timeout_backoff(struct replay_runtime* runtime)
++{
++	struct fake_pending* p = runtime->pending_list;
++	int rtt, vs;
++	uint8_t edns_lame_known;
++	int last_rtt, rto;
++	if(!p) return; /* no pending packet to backoff */
++	if(!infra_host(runtime->infra, &p->addr, p->addrlen, p->zone,
++		p->zonelen, runtime->now_secs, &vs, &edns_lame_known, &rtt))
++		return;
++	last_rtt = rtt;
++	rto = infra_rtt_update(runtime->infra, &p->addr, p->addrlen, p->zone,
++		p->zonelen, p->qtype, -1, last_rtt, runtime->now_secs);
++	log_info("infra_rtt_update returned rto %d", rto);
++}
++
+ /**
+  * Advance to the next moment.
+  */
+@@ -608,6 +627,7 @@
+ 	case repevt_timeout:
+ 		mom = runtime->now;
+ 		advance_moment(runtime);
++		expon_timeout_backoff(runtime);
+ 		fake_pending_callback(runtime, mom, NETEVENT_TIMEOUT);
+ 		break;
+ 	case repevt_back_reply:
+@@ -929,6 +949,7 @@
+ 	pend->timeout = timeout/1000;
+ 	pend->transport = transport_udp;
+ 	pend->pkt = NULL;
++	pend->zone = NULL;
+ 	pend->serviced = 0;
+ 	pend->runtime = runtime;
+ 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
+@@ -982,6 +1003,7 @@
+ 	pend->timeout = timeout;
+ 	pend->transport = transport_tcp;
+ 	pend->pkt = NULL;
++	pend->zone = NULL;
+ 	pend->runtime = runtime;
+ 	pend->serviced = 0;
+ 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
+@@ -1017,9 +1039,8 @@
+ 	uint16_t flags, int dnssec, int ATTR_UNUSED(want_dnssec),
+ 	int ATTR_UNUSED(tcp_upstream), int ATTR_UNUSED(ssl_upstream),
+ 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+-	size_t ATTR_UNUSED(zonelen), comm_point_callback_t* callback,
+-	void* callback_arg, ldns_buffer* ATTR_UNUSED(buff),
+-	int (*arg_compare)(void*,void*))
++	size_t zonelen, comm_point_callback_t* callback, void* callback_arg,
++	ldns_buffer* ATTR_UNUSED(buff), int (*arg_compare)(void*,void*))
+ {
+ 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
+ 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
+@@ -1062,6 +1083,10 @@
+ 	}
+ 	memcpy(&pend->addr, addr, addrlen);
+ 	pend->addrlen = addrlen;
++	pend->zone = memdup(zone, zonelen);
++	pend->zonelen = zonelen;
++	pend->qtype = (int)qtype;
++	log_assert(pend->zone);
+ 	pend->callback = callback;
+ 	pend->cb_arg = callback_arg;
+ 	pend->timeout = UDP_AUTH_QUERY_TIMEOUT;
+@@ -1112,6 +1137,7 @@
+ 			else 	runtime->pending_list = p->next;
+ 			ldns_buffer_free(p->buffer);
+ 			ldns_pkt_free(p->pkt);
++			free(p->zone);
+ 			free(p);
+ 			return;
+ 		}
+diff -Naur unbound-1.4.16/testcode/replay.h unbound-trunk/testcode/replay.h
+--- unbound-1.4.16/testcode/replay.h	2011-10-26 11:46:23.000000000 -0400
++++ unbound-trunk/testcode/replay.h	2012-02-22 20:37:22.950368196 -0500
+@@ -323,6 +323,12 @@
+ 	struct sockaddr_storage addr;
+ 	/** len of addr */
+ 	socklen_t addrlen;
++	/** zone name, uncompressed wire format (as used when sent) */
++	uint8_t* zone;
++	/** length of zone name */
++	size_t zonelen;
++	/** qtype */
++	int qtype;
+ 	/** The callback function to call when answer arrives (or timeout) */
+ 	comm_point_callback_t* callback;
+ 	/** callback user argument */
+diff -Naur unbound-1.4.16/testcode/testbound.c unbound-trunk/testcode/testbound.c
+--- unbound-1.4.16/testcode/testbound.c	2010-09-15 03:15:30.000000000 -0400
++++ unbound-trunk/testcode/testbound.c	2012-02-22 20:37:22.995368196 -0500
+@@ -70,6 +70,7 @@
+ 	printf("-p file	playback text file\n");
+ 	printf("-2 	detect SHA256 support (exit code 0 or 1)\n");
+ 	printf("-g 	detect GOST support (exit code 0 or 1)\n");
++	printf("-e 	detect ECDSA support (exit code 0 or 1)\n");
+ 	printf("-s 	testbound self-test - unit test of testbound parts.\n");
+ 	printf("-o str  unbound commandline options separated by spaces.\n");
+ 	printf("Version %s\n", PACKAGE_VERSION);
+@@ -272,7 +273,7 @@
+ 	pass_argc = 1;
+ 	pass_argv[0] = "unbound";
+ 	add_opts("-d", &pass_argc, pass_argv);
+-	while( (c=getopt(argc, argv, "2gho:p:s")) != -1) {
++	while( (c=getopt(argc, argv, "2egho:p:s")) != -1) {
+ 		switch(c) {
+ 		case 's':
+ 			free(pass_argv[1]);
+@@ -288,6 +289,15 @@
+ 			exit(1);
+ #endif
+ 			break;
++		case 'e':
++#if defined(USE_ECDSA)
++			printf("ECDSA supported\n");
++			exit(0);
++#else
++			printf("ECDSA not supported\n");
++			exit(1);
++#endif
++			break;
+ 		case 'g':
+ #ifdef USE_GOST
+ 			if(ldns_key_EVP_load_gost_id()) {
+diff -Naur unbound-1.4.16/testcode/unitmain.c unbound-trunk/testcode/unitmain.c
+--- unbound-1.4.16/testcode/unitmain.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/testcode/unitmain.c	2012-02-22 20:37:22.996368196 -0500
+@@ -445,7 +445,7 @@
+ 		&vs, &edns_lame, &to) );
+ 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
+ 
+-	unit_assert( infra_rtt_update(slab, &one, onelen, zone, zonelen, -1, init, now) );
++	unit_assert( infra_rtt_update(slab, &one, onelen, zone, zonelen, LDNS_RR_TYPE_A, -1, init, now) );
+ 	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
+ 			now, &vs, &edns_lame, &to) );
+ 	unit_assert( vs == 0 && to == init*2 && edns_lame == 0 );
+diff -Naur unbound-1.4.16/testcode/unitverify.c unbound-trunk/testcode/unitverify.c
+--- unbound-1.4.16/testcode/unitverify.c	2010-12-20 11:08:52.000000000 -0500
++++ unbound-trunk/testcode/unitverify.c	2012-02-22 20:37:22.994368196 -0500
+@@ -520,6 +520,11 @@
+ 	  verifytest_file("testdata/test_sigs.gost", "20090807060504");
+ 	else printf("Warning: skipped GOST, openssl does not provide gost.\n");
+ #endif
++#ifdef USE_ECDSA
++	verifytest_file("testdata/test_sigs.ecdsa_p256", "20100908100439");
++	verifytest_file("testdata/test_sigs.ecdsa_p384", "20100908100439");
++	dstest_file("testdata/test_ds.sha384");
++#endif
+ 	dstest_file("testdata/test_ds.sha1");
+ 	nsectest();
+ 	nsec3_hash_test("testdata/test_nsec3_hash.1");
+diff -Naur unbound-1.4.16/util/iana_ports.inc unbound-trunk/util/iana_ports.inc
+--- unbound-1.4.16/util/iana_ports.inc	2012-01-10 04:42:55.000000000 -0500
++++ unbound-trunk/util/iana_ports.inc	2012-02-22 20:37:23.866368198 -0500
+@@ -5026,6 +5026,7 @@
+ 12006,
+ 12007,
+ 12008,
++12009,
+ 12012,
+ 12013,
+ 12109,
+@@ -5272,6 +5273,7 @@
+ 32896,
+ 33123,
+ 33331,
++33334,
+ 33434,
+ 33656,
+ 34249,
+@@ -5304,6 +5306,7 @@
+ 43188,
+ 43189,
+ 43190,
++43439,
+ 43440,
+ 43441,
+ 44321,
+diff -Naur unbound-1.4.16/util/module.h unbound-trunk/util/module.h
+--- unbound-1.4.16/util/module.h	2011-10-26 11:46:23.000000000 -0400
++++ unbound-trunk/util/module.h	2012-02-22 20:37:23.867368198 -0500
+@@ -60,6 +60,7 @@
+ struct val_anchors;
+ struct val_neg_cache;
+ struct iter_forwards;
++struct iter_hints;
+ 
+ /** Maximum number of modules in operation */
+ #define MAX_MODULE 5
+@@ -204,6 +205,14 @@
+ 	/** Mapping of forwarding zones to targets.
+ 	 * iterator forwarder information. per-thread, created by worker */
+ 	struct iter_forwards* fwds;
++	/** 
++	 * iterator forwarder information. per-thread, created by worker.
++	 * The hints -- these aren't stored in the cache because they don't 
++	 * expire. The hints are always used to "prime" the cache. Note 
++	 * that both root hints and stub zone "hints" are stored in this 
++	 * data structure. 
++	 */
++	struct iter_hints* hints;
+ 	/** module specific data. indexed by module id. */
+ 	void* modinfo[MAX_MODULE];
+ };
+diff -Naur unbound-1.4.16/util/netevent.c unbound-trunk/util/netevent.c
+--- unbound-1.4.16/util/netevent.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/util/netevent.c	2012-02-22 20:37:23.867368198 -0500
+@@ -367,11 +367,15 @@
+ 			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
+ 		}
+ 		buf1[sizeof(buf1)-1]=0;
++#ifdef HAVE_STRUCT_IN_PKTINFO_IPI_SPEC_DST
+ 		if(inet_ntop(AF_INET, &r->pktinfo.v4info.ipi_spec_dst, 
+ 			buf2, (socklen_t)sizeof(buf2)) == 0) {
+ 			strncpy(buf2, "(inet_ntop error)", sizeof(buf2));
+ 		}
+ 		buf2[sizeof(buf2)-1]=0;
++#else
++		buf2[0]=0;
++#endif
+ 		log_info("%s: %d %s %s", str, r->pktinfo.v4info.ipi_ifindex,
+ 			buf1, buf2);
+ #elif defined(IP_RECVDSTADDR)
+diff -Naur unbound-1.4.16/validator/autotrust.c unbound-trunk/validator/autotrust.c
+--- unbound-1.4.16/validator/autotrust.c	2012-01-19 09:17:22.000000000 -0500
++++ unbound-trunk/validator/autotrust.c	2012-02-22 20:37:14.741368184 -0500
+@@ -996,6 +996,9 @@
+ 	/* success; overwrite actual file */
+ 	fclose(out);
+ 	verbose(VERB_ALGO, "autotrust: replaced %s", fname);
++#ifdef UB_ON_WINDOWS
++	(void)unlink(fname); /* windows does not replace file with rename() */
++#endif
+ 	if(rename(tempf, fname) < 0) {
+ 		log_err("rename(%s to %s): %s", tempf, fname, strerror(errno));
+ 	}
+diff -Naur unbound-1.4.16/validator/val_anchor.c unbound-trunk/validator/val_anchor.c
+--- unbound-1.4.16/validator/val_anchor.c	2011-11-10 13:44:06.000000000 -0500
++++ unbound-trunk/validator/val_anchor.c	2012-02-22 20:37:14.741368184 -0500
+@@ -49,7 +49,6 @@
+ #include "util/data/dname.h"
+ #include "util/log.h"
+ #include "util/net_help.h"
+-#include "util/regional.h"
+ #include "util/config_file.h"
+ #ifdef HAVE_GLOB_H
+ #include <glob.h>
+@@ -77,11 +76,6 @@
+ 	struct val_anchors* a = (struct val_anchors*)calloc(1, sizeof(*a));
+ 	if(!a)
+ 		return NULL;
+-	a->region = regional_create();
+-	if(!a->region) {
+-		free(a);
+-		return NULL;
+-	}
+ 	a->tree = rbtree_create(anchor_cmp);
+ 	if(!a->tree) {
+ 		anchors_delete(a);
+@@ -98,15 +92,45 @@
+ 	return a;
+ }
+ 
++/** delete assembled rrset */
++static void
++assembled_rrset_delete(struct ub_packed_rrset_key* pkey)
++{
++	if(!pkey) return;
++	if(pkey->entry.data) {
++		struct packed_rrset_data* pd = (struct packed_rrset_data*)
++			pkey->entry.data;
++		free(pd->rr_data);
++		free(pd->rr_ttl);
++		free(pd->rr_len);
++		free(pd);
++	}
++	free(pkey->rk.dname);
++	free(pkey);
++}
++
+ /** destroy locks in tree and delete autotrust anchors */
+ static void
+ anchors_delfunc(rbnode_t* elem, void* ATTR_UNUSED(arg))
+ {
+ 	struct trust_anchor* ta = (struct trust_anchor*)elem;
++	if(!ta) return;
+ 	if(ta->autr) {
+ 		autr_point_delete(ta);
+ 	} else {
++		struct ta_key* p, *np;
+ 		lock_basic_destroy(&ta->lock);
++		free(ta->name);
++		p = ta->keylist;
++		while(p) {
++			np = p->next;
++			free(p->data);
++			free(p);
++			p = np;
++		}
++		assembled_rrset_delete(ta->ds_rrset);
++		assembled_rrset_delete(ta->dnskey_rrset);
++		free(ta);
+ 	}
+ }
+ 
+@@ -118,9 +142,9 @@
+ 	lock_unprotect(&anchors->lock, anchors->autr);
+ 	lock_unprotect(&anchors->lock, anchors);
+ 	lock_basic_destroy(&anchors->lock);
+-	traverse_postorder(anchors->tree, anchors_delfunc, NULL);
++	if(anchors->tree)
++		traverse_postorder(anchors->tree, anchors_delfunc, NULL);
+ 	free(anchors->tree);
+-	regional_destroy(anchors->region);
+ 	autr_global_delete(anchors->autr);
+ 	free(anchors);
+ }
+@@ -193,30 +217,34 @@
+ /** create new trust anchor object */
+ static struct trust_anchor*
+ anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
+-	size_t namelen, uint16_t dclass)
++	size_t namelen, uint16_t dclass, int lockit)
+ {
+ #ifdef UNBOUND_DEBUG
+ 	rbnode_t* r;
+ #endif
+-	struct trust_anchor* ta = (struct trust_anchor*)regional_alloc(
+-		anchors->region, sizeof(struct trust_anchor));
++	struct trust_anchor* ta = (struct trust_anchor*)malloc(
++		sizeof(struct trust_anchor));
+ 	if(!ta)
+ 		return NULL;
+ 	memset(ta, 0, sizeof(*ta));
+ 	ta->node.key = ta;
+-	ta->name = regional_alloc_init(anchors->region, name, namelen);
+-	if(!ta->name)
++	ta->name = memdup(name, namelen);
++	if(!ta->name) {
++		free(ta);
+ 		return NULL;
++	}
+ 	ta->namelabs = namelabs;
+ 	ta->namelen = namelen;
+ 	ta->dclass = dclass;
+ 	lock_basic_init(&ta->lock);
+-	lock_basic_lock(&anchors->lock);
++	if(lockit)
++		lock_basic_lock(&anchors->lock);
+ #ifdef UNBOUND_DEBUG
+ 	r =
+ #endif
+ 	rbtree_insert(anchors->tree, &ta->node);
+-	lock_basic_unlock(&anchors->lock);
++	if(lockit)
++		lock_basic_unlock(&anchors->lock);
+ 	log_assert(r != NULL);
+ 	return ta;
+ }
+@@ -237,17 +265,17 @@
+ 	
+ /** create new trustanchor key */
+ static struct ta_key*
+-anchor_new_ta_key(struct val_anchors* anchors, uint8_t* rdata, size_t rdata_len,
+-	uint16_t type)
++anchor_new_ta_key(uint8_t* rdata, size_t rdata_len, uint16_t type)
+ {
+-	struct ta_key* k = (struct ta_key*)regional_alloc(anchors->region,
+-		sizeof(*k));
++	struct ta_key* k = (struct ta_key*)malloc(sizeof(*k));
+ 	if(!k)
+ 		return NULL;
+ 	memset(k, 0, sizeof(*k));
+-	k->data = regional_alloc_init(anchors->region, rdata, rdata_len);
+-	if(!k->data)
++	k->data = memdup(rdata, rdata_len);
++	if(!k->data) {
++		free(k);
+ 		return NULL;
++	}
+ 	k->len = rdata_len;
+ 	k->type = type;
+ 	return k;
+@@ -282,7 +310,7 @@
+ 	/* lookup or create trustanchor */
+ 	ta = anchor_find(anchors, name, namelabs, namelen, dclass);
+ 	if(!ta) {
+-		ta = anchor_new_ta(anchors, name, namelabs, namelen, dclass);
++		ta = anchor_new_ta(anchors, name, namelabs, namelen, dclass, 1);
+ 		if(!ta)
+ 			return NULL;
+ 		lock_basic_lock(&ta->lock);
+@@ -296,7 +324,7 @@
+ 		lock_basic_unlock(&ta->lock);
+ 		return ta;
+ 	}
+-	k = anchor_new_ta_key(anchors, rdata, rdata_len, type);
++	k = anchor_new_ta_key(rdata, rdata_len, type);
+ 	if(!k) {
+ 		lock_basic_unlock(&ta->lock);
+ 		return NULL;
+@@ -826,55 +854,73 @@
+ 
+ /** 
+  * Assemble an rrset structure for the type 
+- * @param region: allocated in this region.
+  * @param ta: trust anchor.
+  * @param num: number of items to fetch from list.
+  * @param type: fetch only items of this type.
+  * @return rrset or NULL on error.
+  */
+ static struct ub_packed_rrset_key*
+-assemble_it(struct regional* region, struct trust_anchor* ta, size_t num, 
+-	uint16_t type)
++assemble_it(struct trust_anchor* ta, size_t num, uint16_t type)
+ {
+ 	struct ub_packed_rrset_key* pkey = (struct ub_packed_rrset_key*)
+-		regional_alloc(region, sizeof(*pkey));
++		malloc(sizeof(*pkey));
+ 	struct packed_rrset_data* pd;
+ 	struct ta_key* tk;
+ 	size_t i;
+ 	if(!pkey)
+ 		return NULL;
+ 	memset(pkey, 0, sizeof(*pkey));
+-	pkey->rk.dname = regional_alloc_init(region, ta->name, ta->namelen);
+-	if(!pkey->rk.dname)
++	pkey->rk.dname = memdup(ta->name, ta->namelen);
++	if(!pkey->rk.dname) {
++		free(pkey);
+ 		return NULL;
+-	
++	}
++
+ 	pkey->rk.dname_len = ta->namelen;
+ 	pkey->rk.type = htons(type);
+ 	pkey->rk.rrset_class = htons(ta->dclass);
+ 	/* The rrset is build in an uncompressed way. This means it
+ 	 * cannot be copied in the normal way. */
+-	pd = (struct packed_rrset_data*)regional_alloc(region, sizeof(*pd));
+-	if(!pd)
++	pd = (struct packed_rrset_data*)malloc(sizeof(*pd));
++	if(!pd) {
++		free(pkey->rk.dname);
++		free(pkey);
+ 		return NULL;
++	}
+ 	memset(pd, 0, sizeof(*pd));
+ 	pd->count = num;
+ 	pd->trust = rrset_trust_ultimate;
+-	pd->rr_len = (size_t*)regional_alloc(region, num*sizeof(size_t));
+-	if(!pd->rr_len)
+-		return NULL;
+-	pd->rr_ttl = (uint32_t*)regional_alloc(region, num*sizeof(uint32_t));
+-	if(!pd->rr_ttl)
+-		return NULL;
+-	pd->rr_data = (uint8_t**)regional_alloc(region, num*sizeof(uint8_t*));
+-	if(!pd->rr_data)
++	pd->rr_len = (size_t*)malloc(num*sizeof(size_t));
++	if(!pd->rr_len) {
++		free(pd);
++		free(pkey->rk.dname);
++		free(pkey);
++		return NULL;
++	}
++	pd->rr_ttl = (uint32_t*)malloc(num*sizeof(uint32_t));
++	if(!pd->rr_ttl) {
++		free(pd->rr_len);
++		free(pd);
++		free(pkey->rk.dname);
++		free(pkey);
++		return NULL;
++	}
++	pd->rr_data = (uint8_t**)malloc(num*sizeof(uint8_t*));
++	if(!pd->rr_data) {
++		free(pd->rr_ttl);
++		free(pd->rr_len);
++		free(pd);
++		free(pkey->rk.dname);
++		free(pkey);
+ 		return NULL;
++	}
+ 	/* fill in rrs */
+ 	i=0;
+ 	for(tk = ta->keylist; tk; tk = tk->next) {
+ 		if(tk->type != type)
+ 			continue;
+ 		pd->rr_len[i] = tk->len;
+-		/* reuse data ptr to allocation in region */
++		/* reuse data ptr to allocation in talist */
+ 		pd->rr_data[i] = tk->data;
+ 		pd->rr_ttl[i] = 0;
+ 		i++;
+@@ -885,22 +931,20 @@
+ 
+ /**
+  * Assemble structures for the trust DS and DNSKEY rrsets.
+- * @param anchors: trust anchor storage.
+  * @param ta: trust anchor
+  * @return: false on error.
+  */
+ static int
+-anchors_assemble(struct val_anchors* anchors, struct trust_anchor* ta)
++anchors_assemble(struct trust_anchor* ta)
+ {
+ 	if(ta->numDS > 0) {
+-		ta->ds_rrset = assemble_it(anchors->region, ta,
+-			ta->numDS, LDNS_RR_TYPE_DS);
++		ta->ds_rrset = assemble_it(ta, ta->numDS, LDNS_RR_TYPE_DS);
+ 		if(!ta->ds_rrset)
+ 			return 0;
+ 	}
+ 	if(ta->numDNSKEY > 0) {
+-		ta->dnskey_rrset = assemble_it(anchors->region, ta,
+-			ta->numDNSKEY, LDNS_RR_TYPE_DNSKEY);
++		ta->dnskey_rrset = assemble_it(ta, ta->numDNSKEY,
++			LDNS_RR_TYPE_DNSKEY);
+ 		if(!ta->dnskey_rrset)
+ 			return 0;
+ 	}
+@@ -961,7 +1005,7 @@
+ 			ta = next; /* skip */
+ 			continue;
+ 		}
+-		if(!anchors_assemble(anchors, ta)) {
++		if(!anchors_assemble(ta)) {
+ 			log_err("out of memory");
+ 			lock_basic_unlock(&ta->lock);
+ 			lock_basic_unlock(&anchors->lock);
+@@ -987,7 +1031,7 @@
+ 				" upgrade unbound and openssl)", b);
+ 			(void)rbtree_delete(anchors->tree, &ta->node);
+ 			lock_basic_unlock(&ta->lock);
+-			lock_basic_destroy(&ta->lock);
++			anchors_delfunc(&ta->node, NULL);
+ 			ta = next;
+ 			continue;
+ 		}
+@@ -1146,5 +1190,72 @@
+ size_t 
+ anchors_get_mem(struct val_anchors* anchors)
+ {
+-	return sizeof(*anchors) + regional_get_mem(anchors->region);
++	struct trust_anchor *ta;
++	size_t s = sizeof(*anchors);
++	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
++		s += sizeof(*ta) + ta->namelen;
++		/* keys and so on */
++	}
++	return s;
++}
++
++int
++anchors_add_insecure(struct val_anchors* anchors, uint16_t c, uint8_t* nm)
++{
++	struct trust_anchor key;
++	key.node.key = &key;
++	key.name = nm;
++	key.namelabs = dname_count_size_labels(nm, &key.namelen);
++	key.dclass = c;
++	lock_basic_lock(&anchors->lock);
++	if(rbtree_search(anchors->tree, &key)) {
++		lock_basic_unlock(&anchors->lock);
++		/* nothing to do, already an anchor or insecure point */
++		return 1;
++	}
++	if(!anchor_new_ta(anchors, nm, key.namelabs, key.namelen, c, 0)) {
++		log_err("out of memory");
++		lock_basic_unlock(&anchors->lock);
++		return 0;
++	}
++	/* no other contents in new ta, because it is insecure point */
++	anchors_init_parents_locked(anchors);
++	lock_basic_unlock(&anchors->lock);
++	return 1;
++}
++
++void
++anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
++        uint8_t* nm)
++{
++	struct trust_anchor key;
++	struct trust_anchor* ta;
++	key.node.key = &key;
++	key.name = nm;
++	key.namelabs = dname_count_size_labels(nm, &key.namelen);
++	key.dclass = c;
++	lock_basic_lock(&anchors->lock);
++	if(!(ta=(struct trust_anchor*)rbtree_search(anchors->tree, &key))) {
++		lock_basic_unlock(&anchors->lock);
++		/* nothing there */
++		return;
++	}
++	/* lock it to drive away other threads that use it */
++	lock_basic_lock(&ta->lock);
++	/* see if its really an insecure point */
++	if(ta->keylist || ta->autr || ta->numDS || ta->numDNSKEY) {
++		lock_basic_unlock(&ta->lock);
++		/* its not an insecure point, do not remove it */
++		return;
++	}
++
++	/* remove from tree */
++	(void)rbtree_delete(anchors->tree, &ta->node);
++	anchors_init_parents_locked(anchors);
++	lock_basic_unlock(&anchors->lock);
++
++	/* actual free of data */
++	lock_basic_unlock(&ta->lock);
++	anchors_delfunc(&ta->node, NULL);
+ }
++
+diff -Naur unbound-1.4.16/validator/val_anchor.h unbound-trunk/validator/val_anchor.h
+--- unbound-1.4.16/validator/val_anchor.h	2010-07-07 09:13:36.000000000 -0400
++++ unbound-trunk/validator/val_anchor.h	2012-02-22 20:37:14.743368184 -0500
+@@ -43,7 +43,6 @@
+ #define VALIDATOR_VAL_ANCHOR_H
+ #include "util/rbtree.h"
+ #include "util/locks.h"
+-struct regional;
+ struct trust_anchor;
+ struct config_file;
+ struct ub_packed_rrset_key;
+@@ -60,11 +59,6 @@
+ struct val_anchors {
+ 	/** lock on trees */
+ 	lock_basic_t lock;
+-	/** 
+-	 * region where trust anchors are allocated.
+-	 * Autotrust anchors are malloced so they can be updated. 
+-	 */
+-	struct regional* region;
+ 	/**
+ 	 * Anchors are store in this tree. Sort order is chosen, so that
+ 	 * dnames are in nsec-like order. A lookup on class, name will return
+@@ -111,7 +105,6 @@
+ 	struct trust_anchor* parent;
+ 	/** 
+ 	 * List of DS or DNSKEY rrs that form the trust anchor.
+-	 * It is allocated in the region.
+ 	 */
+ 	struct ta_key* keylist;
+ 	/** Autotrust anchor point data, or NULL */
+@@ -203,4 +196,23 @@
+ /** compare two trust anchors */
+ int anchor_cmp(const void* k1, const void* k2);
+ 
++/**
++ * Add insecure point trust anchor.  For external use (locks and init_parents)
++ * @param anchors: anchor storage.
++ * @param c: class.
++ * @param nm: name of insecure trust point.
++ * @return false on alloc failure.
++ */
++int anchors_add_insecure(struct val_anchors* anchors, uint16_t c, uint8_t* nm);
++
++/**
++ * Delete insecure point trust anchor.  Does not remove if no such point.
++ * For external use (locks and init_parents)
++ * @param anchors: anchor storage.
++ * @param c: class.
++ * @param nm: name of insecure trust point.
++ */
++void anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
++	uint8_t* nm);
++
+ #endif /* VALIDATOR_VAL_ANCHOR_H */
+diff -Naur unbound-1.4.16/validator/validator.c unbound-trunk/validator/validator.c
+--- unbound-1.4.16/validator/validator.c	2012-01-10 04:42:32.000000000 -0500
++++ unbound-trunk/validator/validator.c	2012-02-22 20:37:14.743368184 -0500
+@@ -1977,15 +1977,17 @@
+ 
+ 	/* store results in cache */
+ 	if(qstate->query_flags&BIT_RD) {
++		/* if secure, this will override cache anyway, no need
++		 * to check if from parentNS */
+ 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
+-			vq->orig_msg->rep, 0, qstate->prefetch_leeway, NULL)) {
++			vq->orig_msg->rep, 0, qstate->prefetch_leeway, 0, NULL)) {
+ 			log_err("out of memory caching validator results");
+ 		}
+ 	} else {
+ 		/* for a referral, store the verified RRsets */
+ 		/* and this does not get prefetched, so no leeway */
+ 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
+-			vq->orig_msg->rep, 1, 0, NULL)) {
++			vq->orig_msg->rep, 1, 0, 0, NULL)) {
+ 			log_err("out of memory caching validator results");
+ 		}
+ 	}
+@@ -2923,7 +2925,6 @@
+ 		return 0;
+ 	return sizeof(*ve) + key_cache_get_mem(ve->kcache) + 
+ 		val_neg_get_mem(ve->neg_cache) +
+-		anchors_get_mem(env->anchors) + 
+ 		sizeof(size_t)*2*ve->nsec3_keyiter_count;
+ }
+ 
+diff -Naur unbound-1.4.16/validator/val_sigcrypt.c unbound-trunk/validator/val_sigcrypt.c
+--- unbound-1.4.16/validator/val_sigcrypt.c	2012-01-17 04:06:18.000000000 -0500
++++ unbound-trunk/validator/val_sigcrypt.c	2012-02-22 20:37:14.739368184 -0500
+@@ -280,6 +280,10 @@
+ 				return 32;
+ 			else	return 0;
+ #endif
++#ifdef USE_ECDSA
++		case LDNS_SHA384:
++			return SHA384_DIGEST_LENGTH;
++#endif
+ 		default: break;
+ 	}
+ 	return 0;
+@@ -348,6 +352,12 @@
+ 				ldns_buffer_limit(b), (unsigned char*)digest))
+ 				return 1;
+ #endif
++#ifdef USE_ECDSA
++		case LDNS_SHA384:
++			(void)SHA384((unsigned char*)ldns_buffer_begin(b),
++				ldns_buffer_limit(b), (unsigned char*)digest);
++			return 1;
++#endif
+ 		default: 
+ 			verbose(VERB_QUERY, "unknown DS digest algorithm %d", 
+ 				(int) ds_get_digest_algo(ds_rrset, ds_idx));
+@@ -418,6 +428,10 @@
+ #if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
+ 	case LDNS_RSASHA512:
+ #endif
++#ifdef USE_ECDSA
++	case LDNS_ECDSAP256SHA256:
++	case LDNS_ECDSAP384SHA384:
++#endif
+ 		return 1;
+ #ifdef USE_GOST
+ 	case LDNS_ECC_GOST:
+@@ -1321,7 +1335,7 @@
+  * Setup DSA key digest in DER encoding ... 
+  * @param sig: input is signature output alloced ptr (unless failure).
+  * 	caller must free alloced ptr if this routine returns true.
+- * @param len: intput is initial siglen, output is output len.
++ * @param len: input is initial siglen, output is output len.
+  * @return false on failure.
+  */
+ static int
+@@ -1350,6 +1364,7 @@
+ 	*sig = NULL;
+ 	newlen = i2d_DSA_SIG(dsasig, sig);
+ 	if(newlen < 0) {
++		DSA_SIG_free(dsasig);
+ 		free(*sig);
+ 		return 0;
+ 	}
+@@ -1358,6 +1373,48 @@
+ 	return 1;
+ }
+ 
++#ifdef USE_ECDSA
++/**
++ * Setup the ECDSA signature in its encoding that the library wants.
++ * Converts from plain numbers to ASN formatted.
++ * @param sig: input is signature, output alloced ptr (unless failure).
++ * 	caller must free alloced ptr if this routine returns true.
++ * @param len: input is initial siglen, output is output len.
++ * @return false on failure.
++ */
++static int
++setup_ecdsa_sig(unsigned char** sig, unsigned int* len)
++{
++	ECDSA_SIG* ecdsa_sig;
++	int newlen;
++	int bnsize = (int)((*len)/2);
++	/* if too short or not even length, fails */
++	if(*len < 16 || bnsize*2 != (int)*len)
++		return 0;
++	/* use the raw data to parse two evenly long BIGNUMs, "r | s". */
++	ecdsa_sig = ECDSA_SIG_new();
++	if(!ecdsa_sig) return 0;
++	ecdsa_sig->r = BN_bin2bn(*sig, bnsize, ecdsa_sig->r);
++	ecdsa_sig->s = BN_bin2bn(*sig+bnsize, bnsize, ecdsa_sig->s);
++	if(!ecdsa_sig->r || !ecdsa_sig->s) {
++		ECDSA_SIG_free(ecdsa_sig);
++		return 0;
++	}
++
++	/* spool it into ASN format */
++	*sig = NULL;
++	newlen = i2d_ECDSA_SIG(ecdsa_sig, sig);
++	if(newlen <= 0) {
++		ECDSA_SIG_free(ecdsa_sig);
++		free(*sig);
++		return 0;
++	}
++	*len = (unsigned int)newlen;
++	ECDSA_SIG_free(ecdsa_sig);
++	return 1;
++}
++#endif /* USE_ECDSA */
++
+ /**
+  * Setup key and digest for verification. Adjust sig if necessary.
+  *
+@@ -1472,6 +1529,62 @@
+ 			}
+ 			break;
+ #endif
++#ifdef USE_ECDSA
++		case LDNS_ECDSAP256SHA256:
++			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
++				LDNS_ECDSAP256SHA256);
++			if(!*evp_key) {
++				verbose(VERB_QUERY, "verify: "
++					"ldns_ecdsa2pkey_raw failed");
++				return 0;
++			}
++#ifdef USE_ECDSA_EVP_WORKAROUND
++			/* openssl before 1.0.0 fixes RSA with the SHA256
++			 * hash in EVP.  We create one for ecdsa_sha256 */
++			{
++				static int md_ecdsa_256_done = 0;
++				static EVP_MD md;
++				if(!md_ecdsa_256_done) {
++					EVP_MD m = *EVP_sha256();
++					md_ecdsa_256_done = 1;
++					m.required_pkey_type[0] = (*evp_key)->type;
++					m.verify = (void*)ECDSA_verify;
++					md = m;
++				}
++				*digest_type = &md;
++			}
++#else
++			*digest_type = EVP_sha256();
++#endif
++			break;
++		case LDNS_ECDSAP384SHA384:
++			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
++				LDNS_ECDSAP384SHA384);
++			if(!*evp_key) {
++				verbose(VERB_QUERY, "verify: "
++					"ldns_ecdsa2pkey_raw failed");
++				return 0;
++			}
++#ifdef USE_ECDSA_EVP_WORKAROUND
++			/* openssl before 1.0.0 fixes RSA with the SHA384
++			 * hash in EVP.  We create one for ecdsa_sha384 */
++			{
++				static int md_ecdsa_384_done = 0;
++				static EVP_MD md;
++				if(!md_ecdsa_384_done) {
++					EVP_MD m = *EVP_sha384();
++					md_ecdsa_384_done = 1;
++					m.required_pkey_type[0] = (*evp_key)->type;
++					m.verify = (void*)ECDSA_verify;
++					md = m;
++				}
++				*digest_type = &md;
++			}
++#else
++			*digest_type = EVP_sha384();
++#endif
++			break;
++#endif /* USE_ECDSA */
+ 		default:
+ 			verbose(VERB_QUERY, "verify: unknown algorithm %d", 
+ 				algo);
+@@ -1519,7 +1632,19 @@
+ 			return sec_status_bogus;
+ 		}
+ 		dofree = 1;
+-	} 
++	}
++#ifdef USE_ECDSA
++	else if(algo == LDNS_ECDSAP256SHA256 || algo == LDNS_ECDSAP384SHA384) {
++		/* EVP uses ASN prefix on sig, which is not in the wire data */
++		if(!setup_ecdsa_sig(&sigblock, &sigblock_len)) {
++			verbose(VERB_QUERY, "verify: failed to setup ECDSA sig");
++			*reason = "use of signature for ECDSA crypto failed";
++			EVP_PKEY_free(evp_key);
++			return sec_status_bogus;
++		}
++		dofree = 1;
++	}
++#endif /* USE_ECDSA */
+ 
+ 	/* do the signature cryptography work */
+ 	EVP_MD_CTX_init(&ctx);
+@@ -1536,7 +1661,7 @@
+ 		if(dofree) free(sigblock);
+ 		return sec_status_unchecked;
+ 	}
+-		
++
+ 	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
+ 	if(EVP_MD_CTX_cleanup(&ctx) == 0) {
+ 		verbose(VERB_QUERY, "verify: EVP_MD_CTX_cleanup failed");
