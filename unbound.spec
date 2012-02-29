@@ -7,8 +7,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.17
-Release: 1%{?dist}
+Version: 1.4.16
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -108,6 +108,7 @@ Python modules and extensions for unbound
 %endif
             --enable-sha2 --disable-gost
 %{__make} %{?_smp_mflags}
+%{__make} %{?_smp_mflags} streamtcp
 
 %install
 %{__make} DESTDIR=%{buildroot} install
@@ -123,6 +124,9 @@ install -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done 
+
+# install streamtcp used for monitoring / debugging unbound's port 80/443 modes
+install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 
 # Install tmpfiles.d config
 mkdir -p %{buildroot}%{_sysconfdir}/tmpfiles.d/
@@ -223,9 +227,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue Feb 28 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-1 UNRELEASED
-- Since the daemon links to the libs staticly, add Requires
+* Wed Feb 29 2012 Paul Wouters <pwouters@redhat.com> - 1.4.16-3 
+- Since the daemon links to the libs staticly, add Requires:
   (this is rhbz#745288)
+- Package up streamtcp as unbound-streamtcp (for monitoring)
 
 * Mon Feb 27 2012 Paul Wouters <pwouters@redhat.com> - 1.4.16-2
 - Don't ghost the directory (rhbz#788805)
