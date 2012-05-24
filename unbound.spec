@@ -7,8 +7,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.16
-Release: 3%{?dist}
+Version: 1.4.17
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -21,7 +21,6 @@ Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
-Patch2: unbound-trunk.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
@@ -96,7 +95,7 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
-%patch2 -p1
+#%patch2 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -106,7 +105,7 @@ Python modules and extensions for unbound
 %if %{with_python}
             --with-pythonmodule --with-pyunbound \
 %endif
-            --enable-sha2 --disable-gost
+            --enable-sha2 --disable-gost --disable-ecdsa
 %{__make} %{?_smp_mflags}
 %{__make} %{?_smp_mflags} streamtcp
 
@@ -227,6 +226,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 24 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-1
+- Updated to 1.4.17 (which mostly brings in patches we already
+  applied from svn trunk)
+
 * Wed Feb 29 2012 Paul Wouters <pwouters@redhat.com> - 1.4.16-3 
 - Since the daemon links to the libs staticly, add Requires:
   (this is rhbz#745288)
