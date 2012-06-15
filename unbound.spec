@@ -5,10 +5,16 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
 %endif
 
+%if 0%{?rhel}
+%{!?munin:%define munin 0}
+%else
+%{!?munin:%define munin 1}
+%endif
+
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.17
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -55,6 +61,7 @@ Unbound is designed as a set of modular components, so that also
 DNSSEC (secure DNS) validation and stub-resolvers (that do not run
 as a server, but are linked into an application) are easily possible.
 
+%if %{munin}
 %package munin
 Summary: Plugin for the munin / munin-node monitoring package
 Group:     System Environment/Daemons
@@ -63,6 +70,7 @@ Requires: %{name} = %{version}-%{release}, bc
 
 %description munin
 Plugin for the munin / munin-node monitoring package
+%endif
 
 %package devel
 Summary: Development package that includes the unbound header files
@@ -115,6 +123,7 @@ install -d 0755 %{buildroot}%{_unitdir}
 install -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
 install -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
+%if %{munin}
 # Install munin plugin and its softlinks
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
@@ -122,7 +131,8 @@ install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
 install -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
-done 
+done
+%endif
 
 # install streamtcp used for monitoring / debugging unbound's port 80/443 modes
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
@@ -162,9 +172,11 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 %doc pythonmod/examples/*
 %endif
 
+%if %{munin}
 %files munin
 %config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
 %{_datadir}/munin/plugins/unbound*
+%endif
 
 %files devel
 %{_libdir}/libunbound.so
@@ -226,6 +238,9 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jun 15 2012 Adam Tkac <atkac redhat com> - 1.4.17-2
+- don't build unbound-munin on RHEL
+
 * Thu May 24 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-1
 - Updated to 1.4.17 (which mostly brings in patches we already
   applied from svn trunk)
