@@ -239,7 +239,7 @@ fi
 
 %changelog
 * Tue Jul 03 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-3
-- unbound FIPS patches for lack of md5, and randomness
+- unbound FIPS patches for MD5,randomness (rhbz#835106)
 
 * Fri Jun 15 2012 Adam Tkac <atkac redhat com> - 1.4.17-2
 - don't build unbound-munin on RHEL
