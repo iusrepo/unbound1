@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.17
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -28,6 +28,7 @@ Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
 Patch2: unbound-1.4.17-fips.patch
+Patch3: unbound-1.4.17-bug452.patch
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
 BuildRequires: libevent-devel expat-devel
@@ -104,6 +105,7 @@ Python modules and extensions for unbound
 %setup -q 
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -150,6 +152,12 @@ rm %{buildroot}%{_libdir}/*.la
 rm %{buildroot}%{python_sitearch}/*.la
 %endif
 
+# create softlink for all functions of libunbound man pages
+for mpage in ub_ctx ub_result ub_ctx_create ub_ctx_delete ub_ctx_set_option ub_ctx_get_option ub_ctx_config ub_ctx_set_fwd ub_ctx_resolvconf ub_ctx_hosts ub_ctx_add_ta ub_ctx_add_ta_file ub_ctx_trustedkeys ub_ctx_debugout ub_ctx_debuglevel ub_ctx_async ub_poll ub_wait ub_fd ub_process ub_resolve ub_resolve_async ub_cancel ub_resolve_free ub_strerror ub_ctx_print_local_zones ub_ctx_zone_add ub_ctx_zone_remove ub_ctx_data_add ub_ctx_data_remove;
+do
+  echo ".so man3/libunbound.3" > %{buildroot}%{_mandir}/man3/$mpage ;
+done
+
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
 %files 
@@ -163,7 +171,9 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %{_sbindir}/*
-%{_mandir}/*/*
+%{_mandir}/man1/*
+%{_mandir}/man5/*
+%{_mandir}/man8/*
 
 %if %{with_python}
 %files python
@@ -181,6 +191,7 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 %files devel
 %{_libdir}/libunbound.so
 %{_includedir}/unbound.h
+%{_mandir}/man3/*
 %doc README
 
 %files libs
@@ -238,6 +249,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 23 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-5
+- Fix for unbound crasher (upstream bug #452)
+- Support libunbound functions in man pages and place in -devel
+
 * Sun Jul 22 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4.17-4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
 
