@@ -13,8 +13,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.17
-Release: 5%{?dist}
+Version: 1.4.18
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -27,8 +27,6 @@ Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
-Patch2: unbound-1.4.17-fips.patch
-Patch3: unbound-1.4.17-bug452.patch
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
 BuildRequires: libevent-devel expat-devel
@@ -104,8 +102,6 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
-%patch2 -p1
-%patch3 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -249,6 +245,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Aug 03 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-1
+- Updated to 1.4.18 (FIPS related fixes mostly)
+- Removed patches that were merged in upstream
+
 * Mon Jul 23 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-5
 - Fix for unbound crasher (upstream bug #452)
 - Support libunbound functions in man pages and place in -devel
