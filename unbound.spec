@@ -248,6 +248,7 @@ fi
 * Fri Aug 03 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-1
 - Updated to 1.4.18 (FIPS related fixes mostly)
 - Removed patches that were merged in upstream
+- Added comment to root.key
 
 * Mon Jul 23 2012 Paul Wouters <pwouters@redhat.com> - 1.4.17-5
 - Fix for unbound crasher (upstream bug #452)
