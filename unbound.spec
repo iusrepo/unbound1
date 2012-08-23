@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.18
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -33,11 +33,11 @@ BuildRequires: libevent-devel expat-devel
 %if %{with_python}
 BuildRequires:  python-devel swig
 %endif
-# Required for SVN versions
-BuildRequires: bison
 BuildRequires: systemd-units
+# Required for SVN versions
+# BuildRequires: bison
 
-Requires(post): systemd-sysv
+#Requires(post): systemd-sysv
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
@@ -202,34 +202,18 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 exit 0
 
 %post
-if [ $1 -eq 1 ] ; then 
-    # Initial installation 
-    /bin/systemctl daemon-reload >/dev/null 2>&1 || :
-fi
-# dnssec-conf used to contain our DLV key, but now we include it via unbound
-# If unbound had previously been configured with dnssec-configure, we need
-# to migrate the location of the DLV key file (to keep DLV enabled, and because
-# unbound won't start with a bad location for a DLV key file.
-sed -i "s:/etc/pki/dnssec-keys[/]*dlv:/etc/unbound:" %{_sysconfdir}/unbound/unbound.conf
+%systemd_post unbound.service
+%systemd_post unbound-keygen.service
 
 %post libs -p /sbin/ldconfig
 
 %preun
-if [ $1 -eq 0 ]; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable unbound.service > /dev/null 2>&1 || :
-    /bin/systemctl stop unbound.service > /dev/null 2>&1 || :
-    /bin/systemctl --no-reload disable unbound-keygen.service > /dev/null 2>&1 || :
-    /bin/systemctl stop unbound-keygen.service > /dev/null 2>&1 || :
-fi
+%systemd_preun unbound.service
+%systemd_preun unbound-keygen.service
 
 %postun 
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
-if [ $1 -ge 1 ] ; then
-    # Package upgrade, not uninstall
-    /bin/systemctl try-restart unbound.service >/dev/null 2>&1 || :
-    /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
-fi
+%systemd_postun_with_restart unbound.service
+%systemd_postun unbound-keygen.service
 
 %postun libs -p /sbin/ldconfig
 
@@ -245,6 +229,10 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 23 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-2
+- Use new systemd-rpm macros (rhbz#850351)
+- Clean up old obsoleted dnssec-conf from < fedora 15
+
 * Fri Aug 03 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-1
 - Updated to 1.4.18 (FIPS related fixes mostly)
 - Removed patches that were merged in upstream
