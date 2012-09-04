@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.18
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -27,6 +27,7 @@ Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Patch1: unbound-1.2-glob.patch
+Patch2: unbound-1.4.18-openssl_threads.patch
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
 BuildRequires: libevent-devel expat-devel
@@ -102,6 +103,7 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
+%patch2 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -229,6 +231,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Sep 04 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-3
+- Fix openssl thread locking bug under high query load
+
 * Thu Aug 23 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-2
 - Use new systemd-rpm macros (rhbz#850351)
 - Clean up old obsoleted dnssec-conf from < fedora 15
