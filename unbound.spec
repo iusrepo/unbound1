@@ -114,6 +114,7 @@ Python modules and extensions for unbound
             --with-pythonmodule --with-pyunbound \
 %endif
             --enable-sha2 --disable-gost --disable-ecdsa
+ulimit -c unlimited 
 %{__make} %{?_smp_mflags}
 %{__make} %{?_smp_mflags} streamtcp
 
