@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.18
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -26,10 +26,14 @@ Source5: root.key
 Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
+Source9: example.com.key
+Source10: example.com.conf
+Source11: block-example.com.conf
 Patch1: unbound-1.2-glob.patch
 Patch2: unbound-1.4.18-openssl_threads.patch
+Patch3: unbound-1.4.18-includeglob.patch
 Group: System Environment/Daemons
-BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
+BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
 BuildRequires: libevent-devel expat-devel
 %if %{with_python}
 BuildRequires:  python-devel swig
@@ -42,7 +46,7 @@ BuildRequires: systemd-units
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
-Requires: ldns >= 1.5.0
+Requires: ldns >= 1.6.13
 Requires(pre): shadow-utils
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs = %{version}-%{release}
@@ -159,6 +163,13 @@ done
 
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
+# Install directories for easier config file drop in
+
+mkdir -p %{buildroot}%{_sysconfdir}/unbound/{keys.d,conf.d,local.d}
+install -p %{SOURCE9} %{buildroot}%{_sysconfdir}/unbound/keys.d/
+install -p %{SOURCE10} %{buildroot}%{_sysconfdir}/unbound/conf.d/
+install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
+
 %files 
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %{_unitdir}/%{name}.service
@@ -169,6 +180,9 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
+%attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d
+%attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d
+%attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d
 %{_sbindir}/*
 %{_mandir}/man1/*
 %{_mandir}/man5/*
@@ -232,6 +246,11 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Sep 26 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-4
+- Patch to allow wildcards in include: statements
+- Add directories /etc/unbound/keys.d,conf.d,local.d with
+  example entries
+
 * Tue Sep 04 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-3
 - Fix openssl thread locking bug under high query load
 
