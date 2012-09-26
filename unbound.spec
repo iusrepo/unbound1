@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.18
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -108,6 +108,7 @@ Python modules and extensions for unbound
 %setup -q 
 %patch1 -p1
 %patch2 -p0
+%patch3 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -246,7 +247,7 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Wed Sep 26 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-4
+* Wed Sep 26 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-5
 - Patch to allow wildcards in include: statements
 - Add directories /etc/unbound/keys.d,conf.d,local.d with
   example entries
