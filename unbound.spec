@@ -192,7 +192,13 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d
-%{_sbindir}/*
+%{_sbindir}/unbound
+%{_sbindir}/unbound-checkconf
+%{_sbindir}/unbound-control
+%{_sbindir}/unbound-control-setup
+%{_sbindir}/unbound-host
+%{_sbindir}/unbound-streamtcp
+
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_mandir}/man8/*
@@ -218,6 +224,7 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %doc README
 
 %files libs
+%{_sbindir}/unbound-anchor
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
 %{_sysconfdir}/cron.monthly/unbound-anchor
@@ -279,6 +286,8 @@ exit 0
   be used without the daemon.
 - sub packages now depends on base package of same arch
 - Build munin package as noarch
+- unbound-anchor moved to unbound-libs package. It is needed
+  to update the root.anchor key file.
 
 * Tue Sep 04 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-3
 - Fix openssl thread locking bug under high query load
