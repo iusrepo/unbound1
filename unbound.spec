@@ -23,7 +23,6 @@ Source2: unbound.conf
 Source3: unbound.munin
 Source4: unbound_munin_
 Source5: root.key
-Source13: root.anchor
 Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
