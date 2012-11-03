@@ -3,7 +3,7 @@
 # unbound	This shell script takes care of starting and stopping
 #		unbound (DNS server).
 #
-# chkconfig:   - 14 86
+# chkconfig:   - 21 86
 # description:	unbound is a Domain Name Server (DNS) \
 #		that is used to resolve host names to IP addresses.
 
