@@ -23,6 +23,7 @@ Source2: unbound.conf
 Source3: unbound.munin
 Source4: unbound_munin_
 Source5: root.key
+Source13: root.anchor
 Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
@@ -135,13 +136,12 @@ install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
 %if %{munin}
-# Install munin plugin and its softlinks
-install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d %{buildroot}%{_sysconfdir}/sysconfig
-install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
 install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
 install -d 0755 %{buildroot}%{_sysconfdir}/cron.monthly
 install -p -m 0755 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.monthly/unbound-anchor
-
+# Install munin plugin and its softlinks
+install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
+install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
 install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
 install -p -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
@@ -188,7 +188,10 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
+<<<<<<< HEAD
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+=======
+>>>>>>> c4f62ca05eb9a893ea4bf81f7175b9effe062d51
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d
@@ -220,10 +223,16 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %files libs
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
+<<<<<<< HEAD
 %{_sysconfdir}/cron.monthly/unbound-anchor
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
+=======
+%{_sysconfdir}/%{name}/root.anchor
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
+>>>>>>> c4f62ca05eb9a893ea4bf81f7175b9effe062d51
 %doc doc/README doc/LICENSE
 
 %pre
@@ -236,6 +245,7 @@ exit 0
 %post
 %systemd_post unbound.service
 %systemd_post unbound-keygen.service
+%systemd_post unbound-rootkey.service
 
 %post libs 
 /sbin/ldconfig
@@ -244,10 +254,12 @@ exit 0
 %preun
 %systemd_preun unbound.service
 %systemd_preun unbound-keygen.service
+%systemd_preun unbound-rootkey.service
 
 %postun 
 %systemd_postun_with_restart unbound.service
 %systemd_postun unbound-keygen.service
+%systemd_postun unbound-rootkey.service
 
 %postun libs -p /sbin/ldconfig
 
