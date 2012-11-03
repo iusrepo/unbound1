@@ -29,6 +29,11 @@ Source8: tmpfiles-unbound.conf
 Source9: example.com.key
 Source10: example.com.conf
 Source11: block-example.com.conf
+# From http://data.iana.org/root-anchors/icannbundle.pem
+Source12: icannbundle.pem
+Source13: root.anchor
+Source14: unbound.sysconfig
+Source15: unbound-monthly.cron
 Patch1: unbound-1.2-glob.patch
 Patch2: unbound-1.4.18-openssl_threads.patch
 Patch3: unbound-1.4.18-includeglob.patch
@@ -125,15 +130,20 @@ Python modules and extensions for unbound
 %install
 %{__make} DESTDIR=%{buildroot} install
 install -d 0755 %{buildroot}%{_unitdir}
-install -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
-install -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
-install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
+install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
+install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
+install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
+install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
 %if %{munin}
 # Install munin plugin and its softlinks
-install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
-install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
+install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d %{buildroot}%{_sysconfdir}/sysconfig
+install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
+install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
+install -d 0755 %{buildroot}%{_sysconfdir}/cron.monthly
+install -p -m 0755 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.monthly/unbound-anchor
+
 install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
-install -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
+install -p -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done
@@ -147,7 +157,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/tmpfiles.d/
 install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
 
 # install root and DLV key
-install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
+install -m 0644 %{SOURCE5} %{SOURCE6} %{SOURCE13} %{buildroot}%{_sysconfdir}/unbound/
 
 # remove static library from install (fedora packaging guidelines)
 rm %{buildroot}%{_libdir}/*.la
@@ -178,8 +188,7 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d
@@ -187,6 +196,7 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_mandir}/man8/*
+
 
 %if %{with_python}
 %files python
@@ -209,6 +219,11 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 
 %files libs
 %{_libdir}/libunbound.so.*
+%{_sysconfdir}/%{name}/icannbundle.pem
+%{_sysconfdir}/cron.monthly/unbound-anchor
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %doc doc/README doc/LICENSE
 
 %pre
@@ -222,7 +237,9 @@ exit 0
 %systemd_post unbound.service
 %systemd_post unbound-keygen.service
 
-%post libs -p /sbin/ldconfig
+%post libs 
+/sbin/ldconfig
+%{_sysconfdir}/cron.monthly/unbound-anchor
 
 %preun
 %systemd_preun unbound.service
@@ -250,6 +267,13 @@ exit 0
 - Patch to allow wildcards in include: statements
 - Add directories /etc/unbound/keys.d,conf.d,local.d with
   example entries
+- Added /etc/unbound/root.anchor, maintained by unbound-anchor
+  which is installed as monthly cron and PreExec in systemd config
+  (root.key is unused, but left installed in case people depend on it)
+- Native systemd (simple) and /etc/sysconfig/unbound support
+- Run unbound-checkconf in PreExec
+- Moved trust anchor related files to unbound-libs, as they can
+  be used without the daemon.
 
 * Tue Sep 04 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-3
 - Fix openssl thread locking bug under high query load

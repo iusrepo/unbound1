@@ -5,10 +5,11 @@ After=unbound-keygen.service
 Wants=unbound-keygen.service
 
 [Service]
-Type=forking
-PIDFile=/var/run/unbound/unbound.pid
+Type=simple
 EnvironmentFile=-/etc/sysconfig/unbound
-ExecStart=/usr/sbin/unbound
+ExecStartPre=/usr/sbin/unbound-anchor -a /etc/unbound/root.anchor -c /etc/unbound/icannbundle.pem
+ExecStartPre=/usr/sbin/unbound-checkconf
+ExecStart=/usr/sbin/unbound -d $UNBOUND_OPTIONS
 
 [Install]
 WantedBy=multi-user.target

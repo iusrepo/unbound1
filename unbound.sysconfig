@@ -1,0 +1,3 @@
+# DEBUG="-v -v"
+
+UNBOUND_OPTIONS="$DEBUG"
