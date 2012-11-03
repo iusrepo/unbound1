@@ -130,7 +130,7 @@ Python modules and extensions for unbound
 
 %install
 %{__make} DESTDIR=%{buildroot} install
-install -d 0755 %{buildroot}%{_unitdir}
+install -d 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
 install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
@@ -188,10 +188,7 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
-<<<<<<< HEAD
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
-=======
->>>>>>> c4f62ca05eb9a893ea4bf81f7175b9effe062d51
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d
 %attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d
@@ -223,16 +220,10 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %files libs
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
-<<<<<<< HEAD
 %{_sysconfdir}/cron.monthly/unbound-anchor
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
-=======
-%{_sysconfdir}/%{name}/root.anchor
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
->>>>>>> c4f62ca05eb9a893ea4bf81f7175b9effe062d51
 %doc doc/README doc/LICENSE
 
 %pre
