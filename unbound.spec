@@ -135,10 +135,10 @@ install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
-%if %{munin}
 install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
 install -d 0755 %{buildroot}%{_sysconfdir}/cron.monthly
 install -p -m 0755 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.monthly/unbound-anchor
+%if %{munin}
 # Install munin plugin and its softlinks
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
