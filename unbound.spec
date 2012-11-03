@@ -54,7 +54,7 @@ Requires(postun): systemd-units
 Requires: ldns >= 1.6.13
 Requires(pre): shadow-utils
 # Needed because /usr/sbin/unbound links unbound libs staticly
-Requires: %{name}-libs = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 Obsoletes:      dnssec-conf < 1.27-2
 Provides:       dnssec-conf = 1.27-1
@@ -76,6 +76,7 @@ Summary: Plugin for the munin / munin-node monitoring package
 Group:     System Environment/Daemons
 Requires: munin-node
 Requires: %{name} = %{version}-%{release}, bc
+BuildArch: noarch
 
 %description munin
 Plugin for the munin / munin-node monitoring package
@@ -84,7 +85,7 @@ Plugin for the munin / munin-node monitoring package
 %package devel
 Summary: Development package that includes the unbound header files
 Group: Development/Libraries
-Requires: %{name}-libs = %{version}-%{release}, openssl-devel, ldns-devel
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}, openssl-devel, ldns-devel
 
 %description devel
 The devel package contains the unbound library and the include files
@@ -103,7 +104,7 @@ Contains libraries used by the unbound server and client applications
 %package python
 Summary: Python modules and extensions for unbound
 Group: Applications/System
-Requires: %{name}-libs = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 %description python
 Python modules and extensions for unbound
@@ -286,6 +287,8 @@ exit 0
 - Run unbound-checkconf in PreExec
 - Moved trust anchor related files to unbound-libs, as they can
   be used without the daemon.
+- sub packages now depends on base package of same arch
+- Build munin package as noarch
 
 * Tue Sep 04 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-3
 - Fix openssl thread locking bug under high query load
