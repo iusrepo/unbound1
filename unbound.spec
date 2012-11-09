@@ -37,6 +37,7 @@ Source15: unbound-monthly.cron
 Patch1: unbound-1.2-glob.patch
 Patch2: unbound-1.4.18-openssl_threads.patch
 Patch3: unbound-1.4.18-includeglob.patch
+Patch4: unbound-1.4.18-stub-hole.patch
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
 BuildRequires: libevent-devel expat-devel
@@ -114,6 +115,7 @@ Python modules and extensions for unbound
 %patch1 -p1
 %patch2 -p0
 %patch3 -p1
+%patch4 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -273,8 +275,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Wed Sep 26 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-5
+* Fri Nov 09 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-5
 - Patch to allow wildcards in include: statements
+- Patch to ensure stube-zone's are lost when using dnssec-triggerd
 - Add directories /etc/unbound/keys.d,conf.d,local.d with
   example entries
 - Added /etc/unbound/root.anchor, maintained by unbound-anchor
