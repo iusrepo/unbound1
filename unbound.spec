@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.18
-Release: 5%{?dist}
+Release: 6%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -278,9 +278,12 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Fri Nov 09 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-5
+* Fri Nov 09 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-6
+- Patch to ensure stube-zone's aren't lost when using dnssec-triggerd
+- added unbound-munin.README file
+
+* Wed Sep 26 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-5
 - Patch to allow wildcards in include: statements
-- Patch to ensure stube-zone's are lost when using dnssec-triggerd
 - Add directories /etc/unbound/keys.d,conf.d,local.d with
   example entries
 - Added /etc/unbound/root.anchor, maintained by unbound-anchor
