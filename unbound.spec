@@ -34,6 +34,7 @@ Source12: icannbundle.pem
 Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound-monthly.cron
+Source16: unbound-munin.README
 Patch1: unbound-1.2-glob.patch
 Patch2: unbound-1.4.18-openssl_threads.patch
 Patch3: unbound-1.4.18-includeglob.patch
@@ -138,6 +139,7 @@ install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
+install -p -m 0644 %{SOURCE16}  .
 install -d 0755 %{buildroot}%{_sysconfdir}/cron.monthly
 install -p -m 0755 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.monthly/unbound-anchor
 %if %{munin}
@@ -217,6 +219,7 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %files munin
 %config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
 %{_datadir}/munin/plugins/unbound*
+%doc unbound-munin.README
 %endif
 
 %files devel
