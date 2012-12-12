@@ -13,8 +13,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.18
-Release: 6%{?dist}
+Version: 1.4.19
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -35,10 +35,6 @@ Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound-monthly.cron
 Source16: unbound-munin.README
-Patch1: unbound-1.2-glob.patch
-Patch2: unbound-1.4.18-openssl_threads.patch
-Patch3: unbound-1.4.18-includeglob.patch
-Patch4: unbound-1.4.18-stub-hole.patch
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
 BuildRequires: libevent-devel expat-devel
@@ -113,10 +109,6 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-%patch1 -p1
-%patch2 -p0
-%patch3 -p1
-%patch4 -p0
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -278,6 +270,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Dec 12 2012 Paul Wouters <pwouters@redhat.com> - 1.4.19-1
+- Updated to 1.4.19 - this integrates all our patches
+
 * Fri Nov 09 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-6
 - Patch to ensure stube-zone's aren't lost when using dnssec-triggerd
 - added unbound-munin.README file
