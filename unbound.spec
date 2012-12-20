@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.19
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -270,7 +270,7 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Wed Dec 12 2012 Paul Wouters <pwouters@redhat.com> - 1.4.19-2
+* Wed Dec 12 2012 Paul Wouters <pwouters@redhat.com> - 1.4.19-3
 - Updated to 1.4.19 - this integrates all existing patches
 - Patch for unbound-anchor (rhbz#888759)
 
