@@ -270,7 +270,7 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Wed Dec 12 2012 Paul Wouters <pwouters@redhat.com> - 1.4.19-1
+* Wed Dec 12 2012 Paul Wouters <pwouters@redhat.com> - 1.4.19-2
 - Updated to 1.4.19 - this integrates all existing patches
 - Patch for unbound-anchor (rhbz#888759)
 
