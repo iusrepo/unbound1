@@ -35,6 +35,7 @@ Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound-monthly.cron
 Source16: unbound-munin.README
+Patch1: unbound-1.4.19-888759.patch
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
 BuildRequires: libevent-devel expat-devel
@@ -109,6 +110,7 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
+%patch1 -p1 -b .888759
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -194,11 +196,9 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 %{_sbindir}/unbound-control-setup
 %{_sbindir}/unbound-host
 %{_sbindir}/unbound-streamtcp
-
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_mandir}/man8/*
-
 
 %if %{with_python}
 %files python
@@ -271,7 +271,8 @@ exit 0
 
 %changelog
 * Wed Dec 12 2012 Paul Wouters <pwouters@redhat.com> - 1.4.19-1
-- Updated to 1.4.19 - this integrates all our patches
+- Updated to 1.4.19 - this integrates all existing patches
+- Patch for unbound-anchor (rhbz#888759)
 
 * Fri Nov 09 2012 Paul Wouters <pwouters@redhat.com> - 1.4.18-6
 - Patch to ensure stube-zone's aren't lost when using dnssec-triggerd
