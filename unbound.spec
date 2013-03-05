@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.19
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -113,6 +113,7 @@ Python modules and extensions for unbound
 %patch1 -p1 -b .888759
 
 %build
+export LDFLAGS="$LDFLAGS -Wl,-z,now"
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
@@ -177,6 +178,9 @@ mkdir -p %{buildroot}%{_sysconfdir}/unbound/{keys.d,conf.d,local.d}
 install -p %{SOURCE9} %{buildroot}%{_sysconfdir}/unbound/keys.d/
 install -p %{SOURCE10} %{buildroot}%{_sysconfdir}/unbound/conf.d/
 install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
+
+# Symlink unbound-control-setup.8 manpage to unbound-control.8
+ln -s %{_mandir}/man8/unbound-control.8 %{buildroot}/%{_mandir}/man8/unbound-control-setup.8
 
 %files 
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
@@ -270,6 +274,10 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 05 2013 Adam Tkac <atkac redhat com> - 1.4.19-5
+- build with full RELRO
+- symlink unbound-control-setup.8 manpage to unbound-control.8
+
 * Fri Feb 15 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4.19-4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
