@@ -13,8 +13,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.19
-Release: 5%{?dist}
+Version: 1.4.20
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -35,7 +35,7 @@ Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound-monthly.cron
 Source16: unbound-munin.README
-Patch1: unbound-1.4.19-888759.patch
+
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
 BuildRequires: libevent-devel expat-devel
@@ -110,7 +110,6 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-%patch1 -p1 -b .888759
 
 %build
 export LDFLAGS="$LDFLAGS -Wl,-z,now"
@@ -274,6 +273,10 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 21 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-1
+- Updated to 1.4.20
+- Removed patch for rhbz#888759 merged in upstream
+
 * Tue Mar 05 2013 Adam Tkac <atkac redhat com> - 1.4.19-5
 - build with full RELRO
 - symlink unbound-control-setup.8 manpage to unbound-control.8
