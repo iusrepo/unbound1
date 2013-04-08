@@ -154,8 +154,10 @@ install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 mkdir -p %{buildroot}%{_sysconfdir}/tmpfiles.d/
 install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
 
-# install root and DLV key
+# install root and DLV key - we keep a copy of the root key in old location,
+# in case user has changed the configuration and we wouldn't update it there
 install -m 0644 %{SOURCE5} %{SOURCE6} %{SOURCE13} %{buildroot}%{_sysconfdir}/unbound/
+install -m 0644 %{SOURCE13} %{buildroot}%{_libdir}/unbound/
 
 # remove static library from install (fedora packaging guidelines)
 rm %{buildroot}%{_libdir}/*.la
@@ -228,9 +230,11 @@ ln -s %{_mandir}/man8/unbound-control.8 %{buildroot}/%{_mandir}/man8/unbound-con
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
 %{_sysconfdir}/cron.monthly/unbound-anchor
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
+%attr(0644,root,root) %config(noreplace) %{_libdir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
+# just left for backwards compat - format is different! (bind format)
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
 %doc doc/README doc/LICENSE
 
 %pre
