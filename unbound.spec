@@ -14,7 +14,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -277,9 +277,10 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Mar 21 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-1
+* Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-2
 - Updated to 1.4.20
 - Removed patch for rhbz#888759 merged in upstream
+- Move root.anchor to /var/lib/unbound to make selinux policy easier for updating
 
 * Tue Mar 05 2013 Adam Tkac <atkac redhat com> - 1.4.19-5
 - build with full RELRO
