@@ -278,6 +278,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-3
+- Remove space from UNBOUND_OPTIONS in unbound.sysconfig
+
 * Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-2
 - Updated to 1.4.20
 - Removed patch for rhbz#888759 merged in upstream
