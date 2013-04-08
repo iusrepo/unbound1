@@ -282,7 +282,7 @@ exit 0
 - Updated to 1.4.20
 - Removed patch for rhbz#888759 merged in upstream
 - Move root.anchor to /var/lib/unbound to make selinux policy easier for updating
-- Move cronjob for root.anchor from unbound to unbound-libs
+- Move cronjob for root.anchor from unbound to unbound-libs, require crontabs
 
 * Tue Mar 05 2013 Adam Tkac <atkac redhat com> - 1.4.19-5
 - build with full RELRO
