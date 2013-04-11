@@ -1,20 +1,17 @@
 %{?!with_python:      %global with_python      1}
+%{?!with_munin:      %global with_munin      1}
 
 %if %{with_python}
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
 %endif
 
-%if 0%{?rhel}
-%{!?munin:%define munin 0}
-%else
-%{!?munin:%define munin 1}
-%endif
+%global _hardened_build 1
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -33,7 +30,7 @@ Source11: block-example.com.conf
 Source12: icannbundle.pem
 Source13: root.anchor
 Source14: unbound.sysconfig
-Source15: unbound-monthly.cron
+Source15: unbound.cron
 Source16: unbound-munin.README
 
 Group: System Environment/Daemons
@@ -54,9 +51,6 @@ Requires(pre): shadow-utils
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
-Obsoletes:      dnssec-conf < 1.27-2
-Provides:       dnssec-conf = 1.27-1
-
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
 
@@ -68,7 +62,7 @@ Unbound is designed as a set of modular components, so that also
 DNSSEC (secure DNS) validation and stub-resolvers (that do not run
 as a server, but are linked into an application) are easily possible.
 
-%if %{munin}
+%if %{with_munin}
 %package munin
 Summary: Plugin for the munin / munin-node monitoring package
 Group:     System Environment/Daemons
@@ -113,7 +107,9 @@ Python modules and extensions for unbound
 %setup -q 
 
 %build
-export LDFLAGS="$LDFLAGS -Wl,-z,now"
+export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
+export CFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
+export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
@@ -121,7 +117,8 @@ export LDFLAGS="$LDFLAGS -Wl,-z,now"
 %if %{with_python}
             --with-pythonmodule --with-pyunbound \
 %endif
-            --enable-sha2 --disable-gost --disable-ecdsa
+            --enable-sha2 --disable-gost --disable-ecdsa \
+            --with-rootkey-file=%{_sharedstatedir}/unbound/root.key 
 
 %{__make} %{?_smp_mflags}
 %{__make} %{?_smp_mflags} streamtcp
@@ -135,9 +132,9 @@ install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
 install -p -m 0644 %{SOURCE16}  .
-install -d 0755 %{buildroot}%{_sysconfdir}/cron.monthly
-install -p -m 0755 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.monthly/unbound-anchor
-%if %{munin}
+install -d 0755 %{buildroot}%{_sysconfdir}/cron.d
+install -p -m 0644 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.d/unbound-anchor
+%if %{with_munin}
 # Install munin plugin and its softlinks
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
@@ -181,21 +178,23 @@ install -p %{SOURCE9} %{buildroot}%{_sysconfdir}/unbound/keys.d/
 install -p %{SOURCE10} %{buildroot}%{_sysconfdir}/unbound/conf.d/
 install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 
-# Symlink unbound-control-setup.8 manpage to unbound-control.8
-ln -s %{_mandir}/man8/unbound-control.8 %{buildroot}/%{_mandir}/man8/unbound-control-setup.8
+# Link unbound-control-setup.8 manpage to unbound-control.8
+echo ".so man8/unbound-control.8" > %{buildroot}/%{_mandir}/man8/unbound-control-setup.8
 
 %files 
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-keygen.service
-%attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
-%attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d
-%attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d
-%attr(0775,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d
+%dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/keys.d
+%attr(0664,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d/*.key
+%dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/conf.d
+%attr(0664,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d/*.conf
+%dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/local.d
+%attr(0664,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d/*.conf
 %{_sbindir}/unbound
 %{_sbindir}/unbound-checkconf
 %{_sbindir}/unbound-control
@@ -213,7 +212,7 @@ ln -s %{_mandir}/man8/unbound-control.8 %{buildroot}/%{_mandir}/man8/unbound-con
 %doc pythonmod/examples/*
 %endif
 
-%if %{munin}
+%if %{with_munin}
 %files munin
 %config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
 %{_datadir}/munin/plugins/unbound*
@@ -227,18 +226,20 @@ ln -s %{_mandir}/man8/unbound-control.8 %{buildroot}/%{_mandir}/man8/unbound-con
 %doc README
 
 %files libs
+%attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %{_sbindir}/unbound-anchor
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
-%{_sysconfdir}/cron.monthly/unbound-anchor
-%attr(0644,root,root) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
+%attr(0644,root,root) %{_sysconfdir}/cron.d/unbound-anchor
+%dir %attr(0775,root,unbound) %{_sharedstatedir}/%{name}
+%attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
-# just left for backwards compat - format is different! (bind format)
+# just left for backwards compat with user changed unbound.conf files - format is different!
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
 %doc doc/README doc/LICENSE
 
-%pre
+%pre libs
 getent group unbound >/dev/null || groupadd -r unbound
 getent passwd unbound >/dev/null || \
 useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
@@ -252,7 +253,8 @@ exit 0
 
 %post libs 
 /sbin/ldconfig
-%{_sysconfdir}/cron.monthly/unbound-anchor
+%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/%{name}/root.key -c %{_sysconfdir}/%{name}/icannbundle.pem ||:
+chown unbound.unbound %{_sharedstatedir}/%{name}/root.key
 
 %preun
 %systemd_preun unbound.service
@@ -278,14 +280,17 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-3
-- Remove space from UNBOUND_OPTIONS in unbound.sysconfig
-
-* Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-2
+* Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-4
 - Updated to 1.4.20
+- Build with full RELRO (not use -z,relro but with -z,relo,-z,now)
+- Fixup man page for unbound-control-setup
+- unbound.service should start before nss-lookup.target (rhbz#919955)
 - Removed patch for rhbz#888759 merged in upstream
-- Move root.anchor to /var/lib/unbound to make selinux policy easier for updating
+- Move root.anchor to /var/lib/unbound to make selinux policy easier for updating (rhbz#896599/rhbz#891008)
 - Move cronjob for root.anchor from unbound to unbound-libs, require crontabs
+- /etc/unbound (and all) should be owned by unbound-libs (rhbz#909691)
+- Remove Obsolete/Provides for dnssec-conf which was last seen in f13
+- Ensure any unbound-anchor failure in post is ignored
 
 * Tue Mar 05 2013 Adam Tkac <atkac redhat com> - 1.4.19-5
 - build with full RELRO

@@ -1,3 +1,0 @@
-#!/bin/sh
-
-/usr/sbin/unbound-anchor -a /var/lib/unbound/root.key -c /etc/unbound/icannbundle.pem
