@@ -126,11 +126,11 @@ export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 %install
 %{__make} DESTDIR=%{buildroot} install
 install -d 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
-install -a -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
-install -a -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
-install -a -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
-install -a -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
-install -a -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
+install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
+install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
+install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
+install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
+install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
 install -p -m 0644 %{SOURCE16}  .
 install -d 0755 %{buildroot}%{_sysconfdir}/cron.d
 install -p -m 0644 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.d/unbound-anchor
@@ -139,7 +139,7 @@ install -p -m 0644 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.d/unbound-ancho
 install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
 install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
-install -a -p -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
+install -p -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done
@@ -149,7 +149,7 @@ done
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 
 # Install tmpfiles.d config
-mkdir -p %{buildroot}%{_sysconfdir}/tmpfiles.d/ %{buildroot}%{_sharedstatedir}/unbound
+install -d -m 0755 %{buildroot}%{_sysconfdir}/tmpfiles.d/ %{buildroot}%{_sharedstatedir}/unbound
 install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
 
 # install root and DLV key - we keep a copy of the root key in old location,
@@ -282,7 +282,7 @@ chown unbound.unbound %{_sharedstatedir}/%{name}/root.key
 %changelog
 * Fri Apr 12 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-5
 - Fix cron job syntax (rhbz#951725)
-- Use install -a to prevent .rpmnew files that are identical to originals
+- Use install -p to prevent .rpmnew files that are identical to originals
 
 * Mon Apr 8 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-4
 - Updated to 1.4.20
