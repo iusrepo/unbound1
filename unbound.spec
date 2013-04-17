@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 5%{?dist}
+Release: 6%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -231,7 +231,7 @@ echo ".so man8/unbound-control.8" > %{buildroot}/%{_mandir}/man8/unbound-control
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
 %attr(0644,root,root) %{_sysconfdir}/cron.d/unbound-anchor
-%dir %attr(0775,root,unbound) %{_sharedstatedir}/%{name}
+%dir %attr(0755,unbound,unbound) %{_sharedstatedir}/%{name}
 %attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
@@ -280,6 +280,9 @@ chown unbound.unbound %{_sharedstatedir}/%{name}/root.key
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 16 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-6
+- /var/lib/unbound should be owned by unbound. group write is not enough
+
 * Fri Apr 12 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-5
 - Fix cron job syntax (rhbz#951725)
 - Use install -p to prevent .rpmnew files that are identical to originals
