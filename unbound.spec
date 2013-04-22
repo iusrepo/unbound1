@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 7%{?dist}
+Release: 8%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -253,7 +253,7 @@ exit 0
 
 %post libs 
 /sbin/ldconfig
-%{_sbindir}/runuser \ --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem" \ --shell /bin/sh unbound
+%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 
 %preun
 %systemd_preun unbound.service
@@ -279,6 +279,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Apr 22 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-8
+- Refix
+
 * Fri Apr 19 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-7
 - Fix runuser call in post.
 
