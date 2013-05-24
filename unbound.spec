@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 8%{?dist}
+Release: 9%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -118,7 +118,7 @@ export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
             --with-pythonmodule --with-pyunbound \
 %endif
             --enable-sha2 --disable-gost --disable-ecdsa \
-            --with-rootkey-file=%{_sharedstatedir}/unbound/root.key 
+            --with-rootkey-file=%{_sharedstatedir}/unbound/root.anchor
 
 %{__make} %{?_smp_mflags}
 %{__make} %{?_smp_mflags} streamtcp
@@ -155,7 +155,7 @@ install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
 # install root and DLV key - we keep a copy of the root key in old location,
 # in case user has changed the configuration and we wouldn't update it there
 install -m 0644 %{SOURCE5} %{SOURCE6} %{SOURCE13} %{buildroot}%{_sysconfdir}/unbound/
-install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/root.key
+install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/
 
 # remove static library from install (fedora packaging guidelines)
 rm %{buildroot}%{_libdir}/*.la
@@ -232,11 +232,10 @@ echo ".so man8/unbound-control.8" > %{buildroot}/%{_mandir}/man8/unbound-control
 %{_sysconfdir}/%{name}/icannbundle.pem
 %attr(0644,root,root) %{_sysconfdir}/cron.d/unbound-anchor
 %dir %attr(0755,unbound,unbound) %{_sharedstatedir}/%{name}
-%attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
+%attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.anchor
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 # just left for backwards compat with user changed unbound.conf files - format is different!
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.anchor
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 %doc doc/README doc/LICENSE
 
 %pre libs
@@ -253,7 +252,7 @@ exit 0
 
 %post libs 
 /sbin/ldconfig
-%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
+%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 
 %preun
 %systemd_preun unbound.service
@@ -279,6 +278,11 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 21 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-9
+- Use /var/lib/unbound/root.anchor (more consistent with other distros)
+- Enable round-robin (with noths() patch)
+- Enable minimal responses
+
 * Mon Apr 22 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-8
 - Refix
 

@@ -9,7 +9,7 @@ Wants=nss-lookup.target
 [Service]
 Type=simple
 EnvironmentFile=-/etc/sysconfig/unbound
-ExecStartPre=/usr/sbin/unbound-anchor -a /var/lib/unbound/root.key -c /etc/unbound/icannbundle.pem
+ExecStartPre=/usr/sbin/unbound-anchor -a /var/lib/unbound/root.anchor -c /etc/unbound/icannbundle.pem
 ExecStartPre=/usr/sbin/unbound-checkconf
 ExecStart=/usr/sbin/unbound -d $UNBOUND_OPTIONS
 
