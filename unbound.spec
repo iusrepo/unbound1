@@ -154,7 +154,7 @@ install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
 
 # install root and DLV key - we keep a copy of the root key in old location,
 # in case user has changed the configuration and we wouldn't update it there
-install -m 0644 %{SOURCE5} %{SOURCE6} %{SOURCE13} %{buildroot}%{_sysconfdir}/unbound/
+install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
 install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/
 
 # remove static library from install (fedora packaging guidelines)
