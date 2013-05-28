@@ -32,6 +32,7 @@ Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
+Patch1: unbound-1.4.20-roundrobin.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
@@ -105,6 +106,7 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
+%patch1 -p1
 
 %build
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
