@@ -254,7 +254,7 @@ exit 0
 
 %post libs 
 /sbin/ldconfig
-%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
+%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 
 %preun
 %systemd_preun unbound.service
@@ -282,6 +282,7 @@ exit 0
 %changelog
 * Tue May 28 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-11
 - Enable round-robin (with noths() patch)
+- Change cron and systemd service to use root.key, not root.anchor
 
 * Sat May 25 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-10
 - Use /var/lib/unbound/root.key (more consistent with other distros)
