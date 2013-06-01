@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 12%{?dist}
+Release: 13%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -280,6 +280,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Sat Jun 01 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-13
+- Run unbound-anchor as user unbound in unbound.service
+
 * Tue May 28 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-12
 - Enable round-robin (with noths() patch)
 - Change cron and systemd service to use root.key, not root.anchor
