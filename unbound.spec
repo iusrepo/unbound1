@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 13%{?dist}
+Release: 14%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -250,7 +250,6 @@ exit 0
 %post
 %systemd_post unbound.service
 %systemd_post unbound-keygen.service
-%systemd_post unbound-rootkey.service
 
 %post libs 
 /sbin/ldconfig
@@ -259,12 +258,10 @@ exit 0
 %preun
 %systemd_preun unbound.service
 %systemd_preun unbound-keygen.service
-%systemd_preun unbound-rootkey.service
 
 %postun 
 %systemd_postun_with_restart unbound.service
 %systemd_postun unbound-keygen.service
-%systemd_postun unbound-rootkey.service
 
 %postun libs -p /sbin/ldconfig
 
@@ -280,6 +277,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Jul 03 2013 Tomas Hozza <thozza@redhat.com> - 1.4.20-14
+- remove missing unbound-rootkey.service from post/preun/postun sections
+
 * Sat Jun 01 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-13
 - Run unbound-anchor as user unbound in unbound.service
 
