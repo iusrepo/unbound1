@@ -109,6 +109,9 @@ Python modules and extensions for unbound
 %patch1 -p1
 
 %build
+export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
+export CFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
+export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
@@ -276,7 +279,6 @@ exit 0
 %changelog
 * Wed Jul 03 2013 Tomas Hozza <thozza@redhat.com> - 1.4.20-14
 - remove missing unbound-rootkey.service from post/preun/postun sections
-- don't hardcode hardening flags, let hardened build macro handles it
 
 * Sat Jun 01 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-13
 - Run unbound-anchor as user unbound in unbound.service
