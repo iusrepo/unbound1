@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 14%{?dist}
+Release: 15%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -277,8 +277,13 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 08 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-15
+- Re-introduce hardening flags for full relro and pie
+- Fixes compilation failure for python module
+
 * Wed Jul 03 2013 Tomas Hozza <thozza@redhat.com> - 1.4.20-14
 - remove missing unbound-rootkey.service from post/preun/postun sections
+- don't hardcode hardening flags, let hardened build macro handles it
 
 * Sat Jun 01 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-13
 - Run unbound-anchor as user unbound in unbound.service
