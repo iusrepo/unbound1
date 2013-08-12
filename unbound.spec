@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 16%{?dist}
+Release: 18%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -33,6 +33,7 @@ Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
 Patch1: unbound-1.4.20-roundrobin.patch
+Patch2: unbound-1.4.20-streamtcp-manpage.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
@@ -107,6 +108,7 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
+%patch2 -p1
 
 %build
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
@@ -149,6 +151,8 @@ done
 
 # install streamtcp used for monitoring / debugging unbound's port 80/443 modes
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
+# install streamtcp man page
+install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
 
 # Install tmpfiles.d config
 install -d -m 0755 %{buildroot}%{_sysconfdir}/tmpfiles.d/ %{buildroot}%{_sharedstatedir}/unbound
@@ -277,8 +281,14 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon Aug 12 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-16
+* Mon Aug 12 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-18
 - Change unbound.conf to only use ephemeral ports (32768-65535)
+
+* Sun Aug 04 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4.20-17
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
+
+* Mon Jul 22 2013 Tomas Hozza <thozza@redhat.com> - 1.4.20-16
+- provide man page for unbound-streamtcp
 
 * Mon Jul 08 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-15
 - Re-introduce hardening flags for full relro and pie
