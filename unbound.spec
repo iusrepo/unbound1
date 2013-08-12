@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 15%{?dist}
+Release: 16%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -277,6 +277,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Aug 12 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-16
+- Change unbound.conf to only use ephemeral ports (32768-65535)
+
 * Mon Jul 08 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-15
 - Re-introduce hardening flags for full relro and pie
 - Fixes compilation failure for python module
