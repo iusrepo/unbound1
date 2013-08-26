@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.20
-Release: 18%{?dist}
+Release: 19%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -34,6 +34,7 @@ Source15: unbound.cron
 Source16: unbound-munin.README
 Patch1: unbound-1.4.20-roundrobin.patch
 Patch2: unbound-1.4.20-streamtcp-manpage.patch
+Patch3: unbound-1.4.20-coverity_scan.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
@@ -109,6 +110,7 @@ Python modules and extensions for unbound
 %setup -q 
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
@@ -281,6 +283,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Aug 26 2013 Tomas Hozza <thozza@redhat.com> - 1.4.20-19
+- Fix errors found by static analysis of source
+
 * Mon Aug 12 2013 Paul Wouters <pwouters@redhat.com> - 1.4.20-18
 - Change unbound.conf to only use ephemeral ports (32768-65535)
 
