@@ -668,7 +668,7 @@ exit 0
 * Wed May 21 2008 Paul Wouters <paul@xelerance.com> - 1.0.0-1
 - Split of -devel package, fixed dependancies, make rpmlint happy
 
-* Thu Apr 25 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 0.12
+* Fri Apr 25 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 0.12
 - Using parts from ports collection entry by Jaap Akkerhuis.
 - Using Fedoraproject wiki guidelines.
 
