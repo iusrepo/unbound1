@@ -282,6 +282,7 @@ exit 0
 - Enabled new max-udp-size: 3072 (so ANY isc.org won't fit)
 - Removed patched merged in by upstream
 - Enable statistics-cumulative for munin-plugin
+- Added outgoing-port-avoid: 0-32767 conformant to SElinux restrictions
 - Updated unbound.conf
 
 * Mon Aug 26 2013 Tomas Hozza <thozza@redhat.com> - 1.4.20-19
