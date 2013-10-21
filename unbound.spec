@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.21
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -183,6 +183,9 @@ install -p %{SOURCE11} %{buildroot}%{_sysconfdir}/unbound/local.d/
 # Link unbound-control-setup.8 manpage to unbound-control.8
 echo ".so man8/unbound-control.8" > %{buildroot}/%{_mandir}/man8/unbound-control-setup.8
 
+%check
+make check
+
 %files 
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %{_unitdir}/%{name}.service
@@ -277,6 +280,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Oct 21 2013 Tomas Hozza <thozza@redhat.com> - 1.4.21-2
+- run test suite during the build
+
 * Thu Sep 19 2013 Paul Wouters <pwouters@redhat.com> - 1.4.21-1
 - Updated to 1.4.21, 
 - Enabled new max-udp-size: 3072 (so ANY isc.org won't fit)
