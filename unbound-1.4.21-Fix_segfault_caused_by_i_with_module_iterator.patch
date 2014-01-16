@@ -1,0 +1,122 @@
+From 5bc8036ec65ce616aa68138bfe6656e895316203 Mon Sep 17 00:00:00 2001
+From: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date: Thu, 16 Jan 2014 13:04:34 +0000
+Subject: [PATCH] - fix #544: Fixed +i causes segfault when running with module
+ conf "iterator".
+
+git-svn-id: http://unbound.nlnetlabs.nl/svn/trunk@3038 be551aaa-1e26-0410-a405-d3ace91eadb9
+Signed-off-by: Tomas Hozza <thozza@redhat.com>
+---
+ daemon/remote.c        | 33 ++++++++++++++++++++-------------
+ validator/val_anchor.c |  2 ++
+ 2 files changed, 22 insertions(+), 13 deletions(-)
+
+diff --git a/daemon/remote.c b/daemon/remote.c
+index 6150502..a5bb75e 100644
+--- a/daemon/remote.c
++++ b/daemon/remote.c
+@@ -1571,7 +1571,7 @@ do_forward_add(SSL* ssl, struct worker* worker, char* args)
+ 	struct delegpt* dp = NULL;
+ 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
+ 		return;
+-	if(insecure) {
++	if(insecure && worker->env.anchors) {
+ 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+ 			nm)) {
+ 			(void)ssl_printf(ssl, "error out of memory\n");
+@@ -1598,7 +1598,7 @@ do_forward_remove(SSL* ssl, struct worker* worker, char* args)
+ 	uint8_t* nm = NULL;
+ 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
+ 		return;
+-	if(insecure)
++	if(insecure && worker->env.anchors)
+ 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+ 			nm);
+ 	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
+@@ -1616,7 +1616,7 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
+ 	struct delegpt* dp = NULL;
+ 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
+ 		return;
+-	if(insecure) {
++	if(insecure && worker->env.anchors) {
+ 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+ 			nm)) {
+ 			(void)ssl_printf(ssl, "error out of memory\n");
+@@ -1626,8 +1626,9 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
+ 		}
+ 	}
+ 	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
+-		if(insecure) anchors_delete_insecure(worker->env.anchors,
+-			LDNS_RR_CLASS_IN, nm);
++		if(insecure && worker->env.anchors)
++			anchors_delete_insecure(worker->env.anchors,
++				LDNS_RR_CLASS_IN, nm);
+ 		(void)ssl_printf(ssl, "error out of memory\n");
+ 		delegpt_free_mlc(dp);
+ 		free(nm);
+@@ -1636,8 +1637,9 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
+ 	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
+ 		(void)ssl_printf(ssl, "error out of memory\n");
+ 		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
+-		if(insecure) anchors_delete_insecure(worker->env.anchors,
+-			LDNS_RR_CLASS_IN, nm);
++		if(insecure && worker->env.anchors)
++			anchors_delete_insecure(worker->env.anchors,
++				LDNS_RR_CLASS_IN, nm);
+ 		free(nm);
+ 		return;
+ 	}
+@@ -1654,7 +1656,7 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
+ 	uint8_t* nm = NULL;
+ 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
+ 		return;
+-	if(insecure)
++	if(insecure && worker->env.anchors)
+ 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+ 			nm);
+ 	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
+@@ -1672,10 +1674,13 @@ do_insecure_add(SSL* ssl, struct worker* worker, char* arg)
+ 	uint8_t* nm = NULL;
+ 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+ 		return;
+-	if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm)) {
+-		(void)ssl_printf(ssl, "error out of memory\n");
+-		free(nm);
+-		return;
++	if(worker->env.anchors) {
++		if(!anchors_add_insecure(worker->env.anchors,
++			LDNS_RR_CLASS_IN, nm)) {
++			(void)ssl_printf(ssl, "error out of memory\n");
++			free(nm);
++			return;
++		}
+ 	}
+ 	free(nm);
+ 	send_ok(ssl);
+@@ -1690,7 +1695,9 @@ do_insecure_remove(SSL* ssl, struct worker* worker, char* arg)
+ 	uint8_t* nm = NULL;
+ 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+ 		return;
+-	anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm);
++	if(worker->env.anchors)
++		anchors_delete_insecure(worker->env.anchors,
++			LDNS_RR_CLASS_IN, nm);
+ 	free(nm);
+ 	send_ok(ssl);
+ }
+diff --git a/validator/val_anchor.c b/validator/val_anchor.c
+index e710f2f..b300718 100644
+--- a/validator/val_anchor.c
++++ b/validator/val_anchor.c
+@@ -1197,6 +1197,8 @@ anchors_get_mem(struct val_anchors* anchors)
+ {
+ 	struct trust_anchor *ta;
+ 	size_t s = sizeof(*anchors);
++	if(!anchors)
++		return 0;
+ 	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
+ 		s += sizeof(*ta) + ta->namelen;
+ 		/* keys and so on */
+-- 
+1.8.4.2
+
