@@ -283,6 +283,9 @@ exit 0
 - Updated to 1.4.22
 - No longer requires the ldns library
 
+* Thu Jan 16 2014 Tomas Hozza <thozza@redhat.com> - 1.4.21-3
+- Fix segfault on adding insecure forward zone when using only iterator (#1054192)
+
 * Mon Oct 21 2013 Tomas Hozza <thozza@redhat.com> - 1.4.21-2
 - run test suite during the build
 
