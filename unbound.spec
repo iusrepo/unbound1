@@ -10,8 +10,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.21
-Release: 2%{?dist}
+Version: 1.4.22
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -34,7 +34,7 @@ Source15: unbound.cron
 Source16: unbound-munin.README
 
 Group: System Environment/Daemons
-BuildRequires: flex, openssl-devel , ldns-devel >= 1.6.13
+BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
 %if %{with_python}
 BuildRequires:  python-devel swig
@@ -46,7 +46,6 @@ BuildRequires: systemd-units
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
-Requires: ldns >= 1.6.13
 Requires(pre): shadow-utils
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
@@ -77,7 +76,7 @@ Plugin for the munin / munin-node monitoring package
 %package devel
 Summary: Development package that includes the unbound header files
 Group: Development/Libraries
-Requires: %{name}-libs%{?_isa} = %{version}-%{release}, openssl-devel, ldns-devel
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}, openssl-devel
 
 %description devel
 The devel package contains the unbound library and the include files
@@ -110,7 +109,7 @@ Python modules and extensions for unbound
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
 export CFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
-%configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
+%configure  --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \
@@ -280,6 +279,10 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 13 2014 Paul Wouters <pwouters@redhat.com> - 1.4.22-1
+- Updated to 1.4.22
+- No longer requires the ldns library
+
 * Mon Oct 21 2013 Tomas Hozza <thozza@redhat.com> - 1.4.21-2
 - run test suite during the build
 
