@@ -11,7 +11,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.22
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -32,6 +32,7 @@ Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
+Patch1: unbound-1.4.22-flushcache.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -104,6 +105,7 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
+%patch1 -p1
 
 %build
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
@@ -279,6 +281,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 01 2014 Paul Wouters <pwouters@redhat.com> - 1.4.22-2
+- Added flushcache patch (SVN commit 3125)
+
 * Thu Mar 13 2014 Paul Wouters <pwouters@redhat.com> - 1.4.22-1
 - Updated to 1.4.22
 - No longer requires the ldns library
