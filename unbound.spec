@@ -2,6 +2,14 @@
 %{?!with_munin:      %global with_munin      1}
 
 %if %{with_python}
+%if 0%{?fedora} >= 22
+%global python python3
+%global __python %{__python3}
+%else
+%global python python2
+%global __python %{__python2}
+%endif
+
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
 %endif
@@ -11,7 +19,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.4.22
-Release: 5%{?dist}
+Release: 6%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -33,16 +41,20 @@ Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
 Patch1: unbound-1.4.22-flushcache.patch
+# Support building with Python 3.x
+# https://bugzilla.redhat.com/show_bug.cgi?id=1115489
+Patch2: unbound-1.4.22-python3.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
 %if %{with_python}
-BuildRequires:  python-devel swig
+BuildRequires: %{python}-devel swig
 %endif
 BuildRequires: systemd-units
 # Required for SVN versions
 # BuildRequires: bison
+BuildRequires: automake autoconf
 
 Requires(post): systemd-units
 Requires(preun): systemd-units
@@ -106,8 +118,11 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch1 -p1
+%patch2 -p1
 
 %build
+# This is needed to rebuild the configure script to support Python 3.x
+autoreconf
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
 export CFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
@@ -116,7 +131,7 @@ export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \
 %if %{with_python}
-            --with-pythonmodule --with-pyunbound \
+            --with-pythonmodule --with-pyunbound PYTHON=%{__python} \
 %endif
             --enable-sha2 --disable-gost --disable-ecdsa \
             --with-rootkey-file=%{_sharedstatedir}/unbound/root.key
@@ -281,6 +296,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Sep 24 2014 Pavel Šimerda <psimerda@redhat.com> - 1.4.22-6
+- Resolves: #1115489 - build with python 3.x for fedora >= 22
+
 * Thu Aug 21 2014 Kevin Fenzi <kevin@scrye.com> - 1.4.22-5
 - Rebuild for rpm bug 1131960
 
