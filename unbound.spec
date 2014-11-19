@@ -18,8 +18,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.4.22
-Release: 6%{?dist}
+Version: 1.5.0
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -40,10 +40,6 @@ Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
-Patch1: unbound-1.4.22-flushcache.patch
-# Support building with Python 3.x
-# https://bugzilla.redhat.com/show_bug.cgi?id=1115489
-Patch2: unbound-1.4.22-python3.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -117,8 +113,6 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-%patch1 -p1
-%patch2 -p1
 
 %build
 # This is needed to rebuild the configure script to support Python 3.x
@@ -296,6 +290,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Nov 19 2014 Tomas Hozza <thozza@redhat.com> - 1.5.0-1
+- update to 1.5.0
+
 * Wed Sep 24 2014 Pavel Šimerda <psimerda@redhat.com> - 1.4.22-6
 - Resolves: #1115489 - build with python 3.x for fedora >= 22
 
