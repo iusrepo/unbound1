@@ -1,0 +1,30 @@
+From b4200f7e7ac1ca4a315df84e92cd31d8ba423cee Mon Sep 17 00:00:00 2001
+From: wouter <wouter@be551aaa-1e26-0410-a405-d3ace91eadb9>
+Date: Fri, 21 Nov 2014 08:22:18 +0000
+Subject: [PATCH] - Fix crash on multiple thread random usage on systems
+ without   arc4random.
+
+git-svn-id: http://unbound.nlnetlabs.nl/svn/trunk@3277 be551aaa-1e26-0410-a405-d3ace91eadb9
+---
+ compat/arc4_lock.c | 4 +++-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/compat/arc4_lock.c b/compat/arc4_lock.c
+index ce8bb41..faa743d 100644
+--- a/compat/arc4_lock.c
++++ b/compat/arc4_lock.c
+@@ -53,8 +53,10 @@ static int arc4lockinit = 0;
+ 
+ void _ARC4_LOCK(void)
+ {
+-	if(!arc4lockinit)
++	if(!arc4lockinit) {
++		arc4lockinit = 1;
+ 		lock_quick_init(&arc4lock);
++	}
+ 	lock_quick_lock(&arc4lock);
+ }
+ 
+-- 
+1.9.3
+
