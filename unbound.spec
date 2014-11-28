@@ -16,13 +16,15 @@
 
 %global _hardened_build 1
 
+%global extra_version rc1
+
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.0
-Release: 3%{?dist}
+Version: 1.5.1
+Release: 0.1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
-Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
+Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
 Source1: unbound.service
 Source2: unbound.conf
 Source3: unbound.munin
@@ -41,8 +43,7 @@ Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
 
-Patch0: unbound-1.5.0-arc4random-race-condition.patch
-Patch1: unbound-aarch64.patch
+Patch0: unbound-aarch64.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -115,9 +116,8 @@ Python modules and extensions for unbound
 %endif
 
 %prep
-%setup -q 
-%patch0 -p1 -b .arc4random_fix
-%patch1 -p1 -b .aarch64
+%setup -q %{?extra_version:-n %{name}-%{version}%{extra_version}}
+%patch0 -p1 -b .aarch64
 
 
 %build
@@ -296,6 +296,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Nov 28 2014 Tomas Hozza <thozza@redhat.com> - 1.5.1-0.1.rc1
+- update to 1.5.1rc1
+
 * Fri Nov 28 2014 Marcin Juszkiewicz <mjuszkiewicz@redhat.com> - 1.5.0-3
 - fix build on aarch64
 
