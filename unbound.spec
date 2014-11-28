@@ -19,7 +19,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -42,6 +42,7 @@ Source15: unbound.cron
 Source16: unbound-munin.README
 
 Patch0: unbound-1.5.0-arc4random-race-condition.patch
+Patch1: unbound-aarch64.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -116,6 +117,7 @@ Python modules and extensions for unbound
 %prep
 %setup -q 
 %patch0 -p1 -b .arc4random_fix
+%patch1 -p1 -b .aarch64
 
 
 %build
@@ -294,6 +296,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Nov 28 2014 Marcin Juszkiewicz <mjuszkiewicz@redhat.com> - 1.5.0-3
+- fix build on aarch64
+
 * Wed Nov 26 2014 Tomas Hozza <thozza@redhat.com> - 1.5.0-2
 - Fix race condition in arc4random (#1166878)
 
