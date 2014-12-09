@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.1
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -292,11 +292,13 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Dec 09 2014 Paul Wouters <pwouters@redhat.com> - 1.5.1-2
+- Change systemd-units to systemd
+- Use _tmpfilesdir macro, don't mark tmpfiles as config
+
 * Tue Dec 09 2014 Paul Wouters <pwouters@redhat.com> - 1.5.1-1
 - Update to 1.5.1 for CVE-2014-8602 (rhbz#1172066)
 - Removed unbound-aarch64.patch which was merged upstream
-- Change systemd-units to systemd
-- Use _tmpfilesdir macro, don't mark tmpfiles as config
 - Don't require autotools for non snapshots or run autoreconf
 
 * Fri Nov 28 2014 Tomas Hozza <thozza@redhat.com> - 1.5.1-0.1.rc1
