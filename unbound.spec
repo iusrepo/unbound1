@@ -293,7 +293,7 @@ exit 0
 
 %changelog
 * Tue Dec 09 2014 Paul Wouters <pwouters@redhat.com> - 1.5.1-1
-- Update to 1.5.1 for CVE-2014-8602
+- Update to 1.5.1 for CVE-2014-8602 (rhbz#1172066)
 - Removed unbound-aarch64.patch which was merged upstream
 
 * Fri Nov 28 2014 Tomas Hozza <thozza@redhat.com> - 1.5.1-0.1.rc1
