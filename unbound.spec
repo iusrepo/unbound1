@@ -16,12 +16,12 @@
 
 %global _hardened_build 1
 
-%global extra_version rc1
+#global extra_version rc1
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.1
-Release: 0.1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -43,8 +43,6 @@ Source14: unbound.sysconfig
 Source15: unbound.cron
 Source16: unbound-munin.README
 
-Patch0: unbound-aarch64.patch
-
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
@@ -54,7 +52,7 @@ BuildRequires: %{python}-devel swig
 BuildRequires: systemd-units
 # Required for SVN versions
 # BuildRequires: bison
-BuildRequires: automake autoconf
+# BuildRequires: automake autoconf
 
 Requires(post): systemd-units
 Requires(preun): systemd-units
@@ -117,12 +115,10 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q %{?extra_version:-n %{name}-%{version}%{extra_version}}
-%patch0 -p1 -b .aarch64
-
 
 %build
 # This is needed to rebuild the configure script to support Python 3.x
-autoreconf
+#autoreconf
 export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
 export CFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
@@ -296,6 +292,10 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Dec 09 2014 Paul Wouters <pwouters@redhat.com> - 1.5.1-1
+- Update to 1.5.1 for CVE-2014-8602
+- Removed unbound-aarch64.patch which was merged upstream
+
 * Fri Nov 28 2014 Tomas Hozza <thozza@redhat.com> - 1.5.1-0.1.rc1
 - update to 1.5.1rc1
 
