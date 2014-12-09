@@ -49,14 +49,14 @@ BuildRequires: libevent-devel expat-devel
 %if %{with_python}
 BuildRequires: %{python}-devel swig
 %endif
-BuildRequires: systemd-units
+BuildRequires: systemd
 # Required for SVN versions
 # BuildRequires: bison
 # BuildRequires: automake autoconf
 
-Requires(post): systemd-units
-Requires(preun): systemd-units
-Requires(postun): systemd-units
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
 Requires(pre): shadow-utils
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
@@ -203,7 +203,7 @@ make check
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-keygen.service
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
-%config(noreplace) %{_sysconfdir}/tmpfiles.d/unbound.conf
+%attr(0644,root,root) %{_tmpfilesdir}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/keys.d
@@ -295,6 +295,9 @@ exit 0
 * Tue Dec 09 2014 Paul Wouters <pwouters@redhat.com> - 1.5.1-1
 - Update to 1.5.1 for CVE-2014-8602 (rhbz#1172066)
 - Removed unbound-aarch64.patch which was merged upstream
+- Change systemd-units to systemd
+- Use _tmpfilesdir macro, don't mark tmpfiles as config
+- Don't require autotools for non snapshots or run autoreconf
 
 * Fri Nov 28 2014 Tomas Hozza <thozza@redhat.com> - 1.5.1-0.1.rc1
 - update to 1.5.1rc1
