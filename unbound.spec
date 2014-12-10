@@ -163,8 +163,8 @@ install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
 
 # Install tmpfiles.d config
-install -d -m 0755 %{buildroot}%{_sysconfdir}/tmpfiles.d/ %{buildroot}%{_sharedstatedir}/unbound
-install -m 0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/tmpfiles.d/unbound.conf
+install -d -m 0755 %{buildroot}%{_tmpfilesdir} %{buildroot}%{_sharedstatedir}/unbound
+install -m 0644 %{SOURCE8} %{buildroot}%{_tmpfilesdir}/unbound.conf
 
 # install root and DLV key - we keep a copy of the root key in old location,
 # in case user has changed the configuration and we wouldn't update it there
