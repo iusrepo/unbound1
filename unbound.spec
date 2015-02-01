@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.1
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -268,7 +268,7 @@ exit 0
 
 %post libs 
 /sbin/ldconfig
-%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
+%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 
 %preun
 %systemd_preun unbound.service
@@ -292,6 +292,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Sun Feb 01 2015 Paul Wouters <pwouters@redhat.com> - 1.5.1-3
+- Fix post to create root.anchor, not root.key, to match cron job
+
 * Tue Dec 09 2014 Paul Wouters <pwouters@redhat.com> - 1.5.1-2
 - Change systemd-units to systemd
 - Use _tmpfilesdir macro, don't mark tmpfiles as config
