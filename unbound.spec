@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.1
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -129,7 +129,7 @@ export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 %if %{with_python}
             --with-pythonmodule --with-pyunbound PYTHON=%{__python} \
 %endif
-            --enable-sha2 --disable-gost --disable-ecdsa \
+            --enable-sha2 --disable-gost --enable-ecdsa \
             --with-rootkey-file=%{_sharedstatedir}/unbound/root.key
 
 %{__make} %{?_smp_mflags}
@@ -292,6 +292,9 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Feb 02 2015 Paul Wouters <pwouters@redhat.com> - 1.5.1-4
+- Build with --enable-ecdsa
+
 * Sun Feb 01 2015 Paul Wouters <pwouters@redhat.com> - 1.5.1-3
 - Fix post to create root.anchor, not root.key, to match cron job
 
