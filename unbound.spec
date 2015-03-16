@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.1
-Release: 4%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.5.3
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -292,6 +292,11 @@ exit 0
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Mar 16 2015 Paul Wouters <pwouters@redhat.com> - 1.5.3-1
+- Updated to 1.5.3 which is a bugfix on 1.5.2 for sighup handling
+- Updated to 1.5.2 which fixes DNSSEC validation with different
+  trust anchors upstream, local-zone has a new keyword 'inform'
+
 * Mon Feb 02 2015 Paul Wouters <pwouters@redhat.com> - 1.5.1-4
 - Build with --enable-ecdsa
 
