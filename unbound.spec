@@ -137,20 +137,20 @@ export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 
 %install
 %{__make} DESTDIR=%{buildroot} install
-install -d 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
+install -d -m 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
 install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
 install -p -m 0644 %{SOURCE16}  .
-install -d 0755 %{buildroot}%{_sysconfdir}/cron.d
+install -d -m 0755 %{buildroot}%{_sysconfdir}/cron.d
 install -p -m 0644 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.d/unbound-anchor
 %if %{with_munin}
 # Install munin plugin and its softlinks
-install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
+install -d -m 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
 install -p -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
-install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
+install -d -m 0755 %{buildroot}%{_datadir}/munin/plugins/
 install -p -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
