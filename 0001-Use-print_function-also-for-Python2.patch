@@ -1,0 +1,127 @@
+From 2b3840deb32d58faa44cf4f02404b4fda51789ba Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Tue, 14 Apr 2015 12:05:15 +0200
+Subject: [PATCH 1/4] Use print_function also for Python2
+
+Signed-off-by: Tomas Hozza <thozza@redhat.com>
+---
+ libunbound/python/examples/async-lookup.py   | 1 +
+ libunbound/python/examples/dns-lookup.py     | 1 +
+ libunbound/python/examples/dnssec-valid.py   | 1 +
+ libunbound/python/examples/dnssec_test.py    | 1 +
+ libunbound/python/examples/example8-1.py     | 1 +
+ libunbound/python/examples/idn-lookup.py     | 1 +
+ libunbound/python/examples/mx-lookup.py      | 1 +
+ libunbound/python/examples/ns-lookup.py      | 1 +
+ libunbound/python/examples/reverse-lookup.py | 1 +
+ 9 files changed, 9 insertions(+)
+
+diff --git a/libunbound/python/examples/async-lookup.py b/libunbound/python/examples/async-lookup.py
+index cbb8ea0..81ba447 100644
+--- a/libunbound/python/examples/async-lookup.py
++++ b/libunbound/python/examples/async-lookup.py
+@@ -32,6 +32,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ import time
+ 
+diff --git a/libunbound/python/examples/dns-lookup.py b/libunbound/python/examples/dns-lookup.py
+index b3f4008..ec85673 100644
+--- a/libunbound/python/examples/dns-lookup.py
++++ b/libunbound/python/examples/dns-lookup.py
+@@ -32,6 +32,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ 
+ ctx = unbound.ub_ctx()
+diff --git a/libunbound/python/examples/dnssec-valid.py b/libunbound/python/examples/dnssec-valid.py
+index 5c3cad9..e613fd2 100644
+--- a/libunbound/python/examples/dnssec-valid.py
++++ b/libunbound/python/examples/dnssec-valid.py
+@@ -32,6 +32,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import os
+ from unbound import ub_ctx,RR_TYPE_A,RR_CLASS_IN
+ 
+diff --git a/libunbound/python/examples/dnssec_test.py b/libunbound/python/examples/dnssec_test.py
+index 0d62b9f..a90ac0c 100644
+--- a/libunbound/python/examples/dnssec_test.py
++++ b/libunbound/python/examples/dnssec_test.py
+@@ -1,4 +1,5 @@
+ #!/usr/bin/env python
++from __future__ import print_function
+ from unbound import ub_ctx, RR_TYPE_A, RR_TYPE_RRSIG, RR_TYPE_NSEC, RR_TYPE_NSEC3
+ import ldns
+ 
+diff --git a/libunbound/python/examples/example8-1.py b/libunbound/python/examples/example8-1.py
+index ca868e5..ba093d9 100644
+--- a/libunbound/python/examples/example8-1.py
++++ b/libunbound/python/examples/example8-1.py
+@@ -33,6 +33,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ 
+ ctx = unbound.ub_ctx()
+diff --git a/libunbound/python/examples/idn-lookup.py b/libunbound/python/examples/idn-lookup.py
+index 2170637..8cc63e0 100644
+--- a/libunbound/python/examples/idn-lookup.py
++++ b/libunbound/python/examples/idn-lookup.py
+@@ -33,6 +33,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ import locale
+ 
+diff --git a/libunbound/python/examples/mx-lookup.py b/libunbound/python/examples/mx-lookup.py
+index f83f690..f3c4e5f 100644
+--- a/libunbound/python/examples/mx-lookup.py
++++ b/libunbound/python/examples/mx-lookup.py
+@@ -33,6 +33,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ 
+ ctx = unbound.ub_ctx()
+diff --git a/libunbound/python/examples/ns-lookup.py b/libunbound/python/examples/ns-lookup.py
+index bcd51de..5acf2a3 100644
+--- a/libunbound/python/examples/ns-lookup.py
++++ b/libunbound/python/examples/ns-lookup.py
+@@ -33,6 +33,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ 
+ ctx = unbound.ub_ctx()
+diff --git a/libunbound/python/examples/reverse-lookup.py b/libunbound/python/examples/reverse-lookup.py
+index 7e06844..da8ab1a 100644
+--- a/libunbound/python/examples/reverse-lookup.py
++++ b/libunbound/python/examples/reverse-lookup.py
+@@ -32,6 +32,7 @@
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+ '''
++from __future__ import print_function
+ import unbound
+ 
+ ctx = unbound.ub_ctx()
+-- 
+2.1.0
+
