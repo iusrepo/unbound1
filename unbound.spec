@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.3
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -40,8 +40,9 @@ Source11: block-example.com.conf
 Source12: icannbundle.pem
 Source13: root.anchor
 Source14: unbound.sysconfig
-Source15: unbound.cron
+Source15: unbound-anchor.timer
 Source16: unbound-munin.README
+Source17: unbound-anchor.service
 
 # https://www.nlnetlabs.nl/bugs-script/show_bug.cgi?id=664
 Patch0:     0001-Use-print_function-also-for-Python2.patch
@@ -107,7 +108,6 @@ Group: Applications/System
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 Requires: openssl >= 0.9.8g-12
-Requires: crontabs
 
 %description libs
 Contains libraries used by the unbound server and client applications
@@ -224,12 +224,12 @@ popd
 install -d -m 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
 install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/unbound-keygen.service
+install -p -m 0644 %{SOURCE15} %{buildroot}%{_unitdir}/unbound-anchor.timer
+install -p -m 0644 %{SOURCE17} %{buildroot}%{_unitdir}/unbound-anchor.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
-install -p -m 0644 %{SOURCE14}  %{buildroot}%{_sysconfdir}/sysconfig/unbound
-install -p -m 0644 %{SOURCE16}  .
-install -d -m 0755 %{buildroot}%{_sysconfdir}/cron.d
-install -p -m 0644 %{SOURCE15}   %{buildroot}%{_sysconfdir}/cron.d/unbound-anchor
+install -p -m 0644 %{SOURCE14} %{buildroot}%{_sysconfdir}/sysconfig/unbound
+install -p -m 0644 %{SOURCE16} .
 %if %{with_munin}
 # Install munin plugin and its softlinks
 install -d -m 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
@@ -306,16 +306,24 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 %post libs
 /sbin/ldconfig
 %{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
+%systemd_post unbound-anchor.timer
+# the Unit is in presets, but would be started afte reboot
+systemctl start unbound-anchor.timer
 
 %preun
 %systemd_preun unbound.service
 %systemd_preun unbound-keygen.service
 
+%preun libs
+%systemd_preun unbound-anchor.timer
+
 %postun
 %systemd_postun_with_restart unbound.service
 %systemd_postun unbound-keygen.service
 
-%postun libs -p /sbin/ldconfig
+%postun libs
+/sbin/ldconfig
+%systemd_postun_with_restart unbound-anchor.timer
 
 %triggerun -- unbound < 1.4.12-4
 # Save the current service runlevel info
@@ -413,7 +421,8 @@ popd
 %{_sbindir}/unbound-anchor
 %{_libdir}/libunbound.so.*
 %{_sysconfdir}/%{name}/icannbundle.pem
-%attr(0644,root,root) %{_sysconfdir}/cron.d/unbound-anchor
+%{_unitdir}/unbound-anchor.timer
+%{_unitdir}/unbound-anchor.service
 %dir %attr(0755,unbound,unbound) %{_sharedstatedir}/%{name}
 %attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
@@ -422,6 +431,11 @@ popd
 
 
 %changelog
+* Mon Apr 27 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-3
+- migrate cronjob to systemd timer unit (#1177285)
+- change the period for unbound-anchor from monthly to daily (#1180267)
+- Thanks to Tomasz Torcz <ttorcz@fedoraproject.org> for the initial patch
+
 * Thu Apr 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-2
 - Fix FTBFS (#1206129)
 - Build python3-unbound and python-unbound bindings for Python 3 and 2 (#1188080)
