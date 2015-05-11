@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.3
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -67,7 +67,6 @@ BuildRequires: automake autoconf libtool
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
-Requires(pre): shadow-utils
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
@@ -106,7 +105,11 @@ The devel package contains the unbound library and the include files
 Summary: Libraries used by the unbound server and client applications
 Group: Applications/System
 Requires(post): /sbin/ldconfig
+Requires(post): systemd
 Requires(postun): /sbin/ldconfig
+Requires(postun): systemd
+Requires(preun): systemd
+Requires(pre): shadow-utils
 Requires: openssl >= 0.9.8g-12
 
 %description libs
@@ -308,7 +311,7 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 %{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 %systemd_post unbound-anchor.timer
 # the Unit is in presets, but would be started afte reboot
-systemctl start unbound-anchor.timer
+/bin/systemctl start unbound-anchor.timer >/dev/null 2>&1 || :
 
 %preun
 %systemd_preun unbound.service
@@ -431,6 +434,10 @@ popd
 
 
 %changelog
+* Mon May 11 2015 Paul Wouters <pwouters@redhat.com> - 1.5.3-4
+- Fixup scriptlets causing systemctl: command not found
+- Resolves rhbz#1219587 Error in PREIN scriptlet in rpm package unbound-libs
+
 * Mon Apr 27 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-3
 - migrate cronjob to systemd timer unit (#1177285)
 - change the period for unbound-anchor from monthly to daily (#1180267)
