@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.3
-Release: 4%{?extra_version:.%{extra_version}}%{?dist}
+Release: 5%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -387,6 +387,7 @@ popd
 %{_sbindir}/unbound-streamtcp
 %{_mandir}/man1/*
 %{_mandir}/man5/*
+%exclude %{_mandir}/man8/unbound-anchor*
 %{_mandir}/man8/*
 
 %if 0%{with_python}
@@ -423,6 +424,7 @@ popd
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %{_sbindir}/unbound-anchor
 %{_libdir}/libunbound.so.*
+%{_mandir}/man8/unbound-anchor*
 %{_sysconfdir}/%{name}/icannbundle.pem
 %{_unitdir}/unbound-anchor.timer
 %{_unitdir}/unbound-anchor.service
@@ -434,6 +436,10 @@ popd
 
 
 %changelog
+* Wed May 13 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-5
+- unbound.service now Wants unbound-anchor.timer
+- unbound-anchor man page moved to the unbound-libs
+
 * Mon May 11 2015 Paul Wouters <pwouters@redhat.com> - 1.5.3-4
 - Fixup scriptlets causing systemctl: command not found
 - Resolves rhbz#1219587 Error in PREIN scriptlet in rpm package unbound-libs

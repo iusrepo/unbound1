@@ -5,6 +5,7 @@ After=unbound-keygen.service
 Wants=unbound-keygen.service
 After=unbound-anchor.service
 Wants=unbound-anchor.service
+Wants=unbound-anchor.timer
 Before=nss-lookup.target
 Wants=nss-lookup.target
 
