@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.3
-Release: 5%{?extra_version:.%{extra_version}}%{?dist}
+Release: 6%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -436,6 +436,9 @@ popd
 
 
 %changelog
+* Tue May 26 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-6
+- Removed usage of DLV from the default configuration (#1223363)
+
 * Wed May 13 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-5
 - unbound.service now Wants unbound-anchor.timer
 - unbound-anchor man page moved to the unbound-libs
