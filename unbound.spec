@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.3
-Release: 6%{?extra_version:.%{extra_version}}%{?dist}
+Release: 7%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -49,6 +49,10 @@ Patch0:     0001-Use-print_function-also-for-Python2.patch
 Patch1:     0002-libunbound-examples-produce-sorted-output.patch
 Patch2:     0003-libunbound-Python-libldns-is-not-used-anymore.patch
 Patch3:     0004-Resolve-Python-3-incompatibilities-in-libunbound-and.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=1229599
+# https://www.nlnetlabs.nl/bugs-script/show_bug.cgi?id=675
+Patch4:     0001-SOA-negative-TTL-is-capped-at-minimumttl-in-its-rdat.patch
+Patch5:     0002-Maximum-negative-TTL-patch-configparser-regeneration.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -152,6 +156,8 @@ pushd %{pkgname}_python2
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 autoreconf -iv
 
@@ -436,6 +442,9 @@ popd
 
 
 %changelog
+* Mon Jun 15 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-7
+- Add option for maximum negative cache TTL (#1229599)
+
 * Tue May 26 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-6
 - Removed usage of DLV from the default configuration (#1223363)
 
