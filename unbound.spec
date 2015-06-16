@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.3
-Release: 7%{?extra_version:.%{extra_version}}%{?dist}
+Release: 8%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -442,8 +442,12 @@ popd
 
 
 %changelog
+* Tue Jun 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-8
+- Revert: Use low maximum negative cache TTL (5 sec) (#1229596)
+
 * Mon Jun 15 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-7
 - Add option for maximum negative cache TTL (#1229599)
+- Use low maximum negative cache TTL (5 sec) (#1229596)
 
 * Tue May 26 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-6
 - Removed usage of DLV from the default configuration (#1223363)
