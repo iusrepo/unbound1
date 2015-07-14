@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.3
-Release: 8%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.5.4
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -44,16 +44,6 @@ Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
 
-# https://www.nlnetlabs.nl/bugs-script/show_bug.cgi?id=664
-Patch0:     0001-Use-print_function-also-for-Python2.patch
-Patch1:     0002-libunbound-examples-produce-sorted-output.patch
-Patch2:     0003-libunbound-Python-libldns-is-not-used-anymore.patch
-Patch3:     0004-Resolve-Python-3-incompatibilities-in-libunbound-and.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=1229599
-# https://www.nlnetlabs.nl/bugs-script/show_bug.cgi?id=675
-Patch4:     0001-SOA-negative-TTL-is-capped-at-minimumttl-in-its-rdat.patch
-Patch5:     0002-Maximum-negative-TTL-patch-configparser-regeneration.patch
-
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
@@ -66,7 +56,7 @@ BuildRequires: python3-devel
 BuildRequires: systemd
 # Required for SVN versions
 # BuildRequires: bison
-BuildRequires: automake autoconf libtool
+# BuildRequires: automake autoconf libtool
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -152,14 +142,9 @@ pushd %{pkgname}_python2
 %endif # with_python
 
 #Add patches here
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
 
-autoreconf -iv
+# only for snapshots
+# autoreconf -iv
 
 %if 0%{with_python}
 # copy common doc files - after here, since it may be patched
@@ -442,6 +427,10 @@ popd
 
 
 %changelog
+* Tue Jul 14 2015 Paul Wouters <pwouters@redhat.com> - 1.5.4-1
+- Update to 1.5.4
+- Removed patches merged into upstream
+
 * Tue Jun 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.3-8
 - Revert: Use low maximum negative cache TTL (5 sec) (#1229596)
 
