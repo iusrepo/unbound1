@@ -299,7 +299,7 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 
 %post libs
 /sbin/ldconfig
-%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
+%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 %systemd_post unbound-anchor.timer
 # start the timer only if installing the package to prevent starting it, if it was stopped on purpose
 if [ "$1" -eq 1 ]; then
@@ -432,6 +432,7 @@ popd
 %changelog
 * Thu Jul 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-2
 - Start unbound-anchor.timer only on new installations
+- Rename root.anchor to root.key in %post section
 
 * Tue Jul 14 2015 Paul Wouters <pwouters@redhat.com> - 1.5.4-1
 - Update to 1.5.4
