@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.4
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -301,8 +301,11 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 /sbin/ldconfig
 %{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.anchor -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 %systemd_post unbound-anchor.timer
-# the Unit is in presets, but would be started afte reboot
-/bin/systemctl start unbound-anchor.timer >/dev/null 2>&1 || :
+# start the timer only if installing the package to prevent starting it, if it was stopped on purpose
+if [ "$1" -eq 1 ]; then
+    # the Unit is in presets, but would be started after reboot
+    /bin/systemctl start unbound-anchor.timer >/dev/null 2>&1 || :
+fi
 
 %preun
 %systemd_preun unbound.service
@@ -427,6 +430,9 @@ popd
 
 
 %changelog
+* Thu Jul 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-2
+- Start unbound-anchor.timer only on new installations
+
 * Tue Jul 14 2015 Paul Wouters <pwouters@redhat.com> - 1.5.4-1
 - Update to 1.5.4
 - Removed patches merged into upstream
