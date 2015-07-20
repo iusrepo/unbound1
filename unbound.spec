@@ -432,6 +432,7 @@ popd
 %changelog
 * Mon Jul 20 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-3
 - Added ExecReload section to unbound.service (#1195785)
+- Removed After syslog.target since it is not needed any more
 
 * Thu Jul 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-2
 - Start unbound-anchor.timer only on new installations
