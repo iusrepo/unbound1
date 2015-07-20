@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.4
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -430,6 +430,9 @@ popd
 
 
 %changelog
+* Mon Jul 20 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-3
+- Added ExecReload section to unbound.service (#1195785)
+
 * Thu Jul 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-2
 - Start unbound-anchor.timer only on new installations
 - Rename root.anchor to root.key in %post section
