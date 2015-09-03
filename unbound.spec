@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.4
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -201,12 +201,6 @@ popd
 
 
 %install
-%if 0%{with_python3}
-pushd %{pkgname}_python3
-%{__make} DESTDIR=%{buildroot} install
-popd
-%endif # with_python3
-
 %if 0%{with_python}
 pushd %{pkgname}_python2
 %endif # with_python
@@ -214,6 +208,12 @@ pushd %{pkgname}_python2
 %if 0%{with_python}
 popd
 %endif # with_python
+
+%if 0%{with_python3}
+pushd %{pkgname}_python3
+%{__make} DESTDIR=%{buildroot} install
+popd
+%endif # with_python3
 
 install -d -m 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
 install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
@@ -430,6 +430,9 @@ popd
 
 
 %changelog
+* Thu Sep 03 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-4
+- Prefer Python3 build over Python2 build for now (#1254566)
+
 * Mon Jul 20 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-3
 - Added ExecReload section to unbound.service (#1195785)
 - Removed After syslog.target since it is not needed any more
