@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.4
-Release: 4%{?extra_version:.%{extra_version}}%{?dist}
+Release: 5%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -430,6 +430,9 @@ popd
 
 
 %changelog
+* Tue Sep 15 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-5
+- Removed dependency and ordering on unbound-anchor.service in unbound.service
+
 * Thu Sep 03 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-4
 - Prefer Python3 build over Python2 build for now (#1254566)
 

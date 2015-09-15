@@ -3,8 +3,6 @@ Description=Unbound recursive Domain Name Server
 After=network.target
 After=unbound-keygen.service
 Wants=unbound-keygen.service
-After=unbound-anchor.service
-Wants=unbound-anchor.service
 Wants=unbound-anchor.timer
 Before=nss-lookup.target
 Wants=nss-lookup.target
@@ -13,6 +11,7 @@ Wants=nss-lookup.target
 Type=simple
 EnvironmentFile=-/etc/sysconfig/unbound
 ExecStartPre=/usr/sbin/unbound-checkconf
+ExecStartPre=-/usr/sbin/unbound-anchor -a /var/lib/unbound/root.key -c /etc/unbound/icannbundle.pem
 ExecStart=/usr/sbin/unbound -d $UNBOUND_OPTIONS
 ExecReload=/usr/sbin/unbound-control reload
 
