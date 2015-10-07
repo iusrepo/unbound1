@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.4
-Release: 5%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.5.5
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -299,7 +299,6 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 
 %post libs
 /sbin/ldconfig
-%{_sbindir}/runuser  --command="%{_sbindir}/unbound-anchor -a %{_sharedstatedir}/unbound/root.key -c %{_sysconfdir}/unbound/icannbundle.pem"  --shell /bin/sh unbound ||:
 %systemd_post unbound-anchor.timer
 # start the timer only if installing the package to prevent starting it, if it was stopped on purpose
 if [ "$1" -eq 1 ]; then
@@ -359,7 +358,7 @@ popd
 %endif # with_python3
 
 
-%files 
+%files
 %doc doc/CREDITS doc/FEATURES
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-keygen.service
@@ -430,6 +429,10 @@ popd
 
 
 %changelog
+* Wed Oct 07 2015 Tomas Hozza <thozza@redhat.com> - 1.5.5-1
+- New upstream release 1.5.5 (#1269137)
+- Removed the anchor update from %%post section of -libs subpackage (#1269137#c2)
+
 * Tue Sep 15 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-5
 - Removed dependency and ordering on unbound-anchor.service in unbound.service
 
