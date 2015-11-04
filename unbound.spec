@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.5
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -429,6 +429,9 @@ popd
 
 
 %changelog
+* Wed Nov 04 2015 Robert Kuska <rkuska@redhat.com> - 1.5.5-2
+- Rebuilt for Python3.5 rebuild
+
 * Wed Oct 07 2015 Tomas Hozza <thozza@redhat.com> - 1.5.5-1
 - New upstream release 1.5.5 (#1269137)
 - Removed the anchor update from %%post section of -libs subpackage (#1269137#c2)
