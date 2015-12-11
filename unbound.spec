@@ -20,7 +20,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.6
+Version: 1.5.7
 Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
@@ -429,6 +429,12 @@ popd
 
 
 %changelog
+* Fri Dec 11 2015 Paul Wouters <pwouters@redhat.com> - 1.5.7-1
+- Update to 1.5.7
+- Enable query minimalization for enhanced DNS query privacy
+- Enable nxdomain hardening to assist with query minimalization and SBLs
+- Updated default unbound.conf for new features from upstream.
+
 * Fri Nov 13 2015 Tomas Hozza <thozza@redhat.com> - 1.5.6-1
 - Update to 1.5.6 (#1176729)
 
