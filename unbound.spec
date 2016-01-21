@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.7
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -43,6 +43,8 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+
+Patch0:   unbound-1.5.7-bz1294339.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -142,6 +144,8 @@ pushd %{pkgname}_python2
 %endif # with_python
 
 #Add patches here
+%patch0 -p1 -b .bz1294339
+
 
 # only for snapshots
 # autoreconf -iv
@@ -429,6 +433,9 @@ popd
 
 
 %changelog
+* Thu Jan 21 2016 Tomas Hozza <thozza@redhat.com> - 1.5.7-2
+- Fix escaping of shell chars in unbound-control-setup (#1294339)
+
 * Fri Dec 11 2015 Paul Wouters <pwouters@redhat.com> - 1.5.7-1
 - Update to 1.5.7
 - Enable query minimalization for enhanced DNS query privacy
