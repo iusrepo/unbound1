@@ -428,7 +428,7 @@ popd
 
 %changelog
 * Wed Mar 02 2016 Paul Wouters <pwouters@redhat.com> - 1.5.8-1
-- Update to 1.5.8 which incorporates rhbz#1294339 fix
+- Update to 1.5.8 (rhbz#1313831) which incorporates rhbz#1294339 patch
 - Updated unbound.conf with new upstream options
 - Enabled ip-transparent: yes (see rhbz#1291449)
 
