@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.7
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.5.8
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -43,8 +43,6 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
-
-Patch0:   unbound-1.5.7-bz1294339.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -142,10 +140,6 @@ Python 3 modules and extensions for unbound
 mv %{pkgname} %{pkgname}_python2
 pushd %{pkgname}_python2
 %endif # with_python
-
-#Add patches here
-%patch0 -p1 -b .bz1294339
-
 
 # only for snapshots
 # autoreconf -iv
@@ -433,6 +427,11 @@ popd
 
 
 %changelog
+* Wed Mar 02 2016 Paul Wouters <pwouters@redhat.com> - 1.5.8-1
+- Update to 1.5.8 which incorporates rhbz#1294339 fix
+- Updated unbound.conf with new upstream options
+- Enabled ip-transparent: yes (see rhbz#1291449)
+
 * Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1.5.7-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
 
