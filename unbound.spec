@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.8
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -181,7 +181,6 @@ pushd %{pkgname}_python2
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
-%{__make} %{?_smp_mflags} streamtcp
 
 %if 0%{with_python}
 popd
@@ -194,6 +193,7 @@ pushd %{pkgname}_python3
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
+%{__make} %{?_smp_mflags} streamtcp
 popd
 %endif # with_python3
 
@@ -210,6 +210,8 @@ popd
 %if 0%{with_python3}
 pushd %{pkgname}_python3
 %{__make} DESTDIR=%{buildroot} install
+# install streamtcp used for monitoring / debugging unbound's port 80/443 modes
+install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 popd
 %endif # with_python3
 
@@ -237,8 +239,6 @@ done
 pushd %{pkgname}_python2
 %endif # with_python
 
-# install streamtcp used for monitoring / debugging unbound's port 80/443 modes
-install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 # install streamtcp man page
 install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
 
@@ -427,6 +427,9 @@ popd
 
 
 %changelog
+* Thu Apr 21 2016 Toshio Kuratomi <toshio@fedoraproject.org> - 1.5.8-2
+- Fix streamtcp to link against libpython3.x instead of libpython2.x
+
 * Wed Mar 02 2016 Paul Wouters <pwouters@redhat.com> - 1.5.8-1
 - Update to 1.5.8 (rhbz#1313831) which incorporates rhbz#1294339 patch
 - Updated unbound.conf with new upstream options
