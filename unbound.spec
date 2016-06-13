@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.8
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.5.9
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -427,6 +427,9 @@ popd
 
 
 %changelog
+* Mon Jun 13 2016 Paul Wouters <pwouters@redhat.com> - 1.5.9-1
+- Updated to 1.5.9
+
 * Thu Apr 21 2016 Toshio Kuratomi <toshio@fedoraproject.org> - 1.5.8-2
 - Fix streamtcp to link against libpython3.x instead of libpython2.x
 
