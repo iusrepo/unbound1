@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.9
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -43,6 +43,8 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+
+Patch1: unbound-1.5.9-iterator.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -135,6 +137,7 @@ Python 3 modules and extensions for unbound
 %prep
 %{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
 %setup -qcn %{pkgname}
+%patch1 -p0
 
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
@@ -427,6 +430,9 @@ popd
 
 
 %changelog
+* Thu Jun 16 2016 Paul Wouters <pwouters@redhat.com> - 1.5.9-2
+- Patch for allowing more queries before failure (needed for query minimalization)
+
 * Mon Jun 13 2016 Paul Wouters <pwouters@redhat.com> - 1.5.9-1
 - Updated to 1.5.9
 
