@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.9
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -430,6 +430,9 @@ popd
 
 
 %changelog
+* Thu Jul 07 2016 Paul Wouters <pwouters@redhat.com> - 1.5.9-3
+- Fix upper port range to 60999 because that's what selinux allows
+
 * Thu Jun 16 2016 Paul Wouters <pwouters@redhat.com> - 1.5.9-2
 - Patch for allowing more queries before failure (needed for query minimalization)
 
