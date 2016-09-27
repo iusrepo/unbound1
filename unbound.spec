@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.5.9
-Release: 4%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.5.10
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -44,11 +44,10 @@ Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
 
-Patch1: unbound-1.5.9-iterator.patch
-
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
+BuildRequires: pkgconfig
 %if 0%{with_python}
 BuildRequires: python2-devel swig
 %endif # with_python
@@ -93,6 +92,7 @@ Plugin for the munin / munin-node monitoring package
 Summary: Development package that includes the unbound header files
 Group: Development/Libraries
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}, openssl-devel
+Requires: pkgconfig
 
 %description devel
 The devel package contains the unbound library and the include files
@@ -137,7 +137,6 @@ Python 3 modules and extensions for unbound
 %prep
 %{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
 %setup -qcn %{pkgname}
-%patch1 -p0
 
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
@@ -245,6 +244,8 @@ pushd %{pkgname}_python2
 # install streamtcp man page
 install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
 
+install -D -m 0644 contrib/libunbound.pc %{buildroot}/%{_libdir}/pkgconfig/libunbound.pc
+
 %if 0%{with_python}
 popd
 %endif # with_python
@@ -260,6 +261,7 @@ install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/root.key
 
 # remove static library from install (fedora packaging guidelines)
 rm %{buildroot}%{_libdir}/*.la
+
 
 %if 0%{with_python}
 rm %{buildroot}%{python2_sitearch}/*.la
@@ -332,7 +334,6 @@ fi
 /sbin/chkconfig --del unbound >/dev/null 2>&1 || :
 /bin/systemctl try-restart unbound.service >/dev/null 2>&1 || :
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
-
 
 %check
 %if 0%{with_python}
@@ -411,6 +412,7 @@ popd
 %{_libdir}/libunbound.so
 %{_includedir}/unbound.h
 %{_mandir}/man3/*
+%{_libdir}/pkgconfig/*.pc
 
 %files libs
 %doc doc/README
@@ -430,6 +432,11 @@ popd
 
 
 %changelog
+* Tue Sep 27 2016 Paul Wouters <pwouters@redhat.com> - 1.5.10-1
+- Updated to 1.5.10 (better TCP handling, bugfixes)
+- Install pkgconfig file in -devel package
+- Updated unbound.conf
+
 * Tue Jul 19 2016 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.5.9-4
 - https://fedoraproject.org/wiki/Changes/Automatic_Provides_for_Python_RPM_Packages
 
