@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.5.10
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -141,16 +141,16 @@ Python 3 modules and extensions for unbound
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
 pushd %{pkgname}_python2
+%else
+pushd %{pkgname}
 %endif # with_python
 
 # only for snapshots
 # autoreconf -iv
 
-%if 0%{with_python}
 # copy common doc files - after here, since it may be patched
 cp -pr doc pythonmod libunbound ../
 popd
-%endif # with_python
 
 %if 0%{?with_python3}
 cp -a %{pkgname}_python2 %{pkgname}_python3
@@ -174,6 +174,8 @@ export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 
 %if 0%{with_python}
 pushd %{pkgname}_python2
+%else
+pushd %{pkgname}
 %endif # with_python
 
 %configure  \
@@ -183,6 +185,7 @@ pushd %{pkgname}_python2
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
+%{__make} %{?_smp_mflags} streamtcp
 
 %if 0%{with_python}
 popd
@@ -201,10 +204,14 @@ popd
 
 
 %install
+install -p -m 0644 %{SOURCE16} .
 %if 0%{with_python}
 pushd %{pkgname}_python2
+%else
+pushd %{pkgname}
 %endif # with_python
 %{__make} DESTDIR=%{buildroot} install
+install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 %if 0%{with_python}
 popd
 %endif # with_python
@@ -212,7 +219,6 @@ popd
 %if 0%{with_python3}
 pushd %{pkgname}_python3
 %{__make} DESTDIR=%{buildroot} install
-# install streamtcp used for monitoring / debugging unbound's port 80/443 modes
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 popd
 %endif # with_python3
@@ -225,7 +231,6 @@ install -p -m 0644 %{SOURCE17} %{buildroot}%{_unitdir}/unbound-anchor.service
 install -p -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE12} %{buildroot}%{_sysconfdir}/unbound
 install -p -m 0644 %{SOURCE14} %{buildroot}%{_sysconfdir}/sysconfig/unbound
-install -p -m 0644 %{SOURCE16} .
 %if %{with_munin}
 # Install munin plugin and its softlinks
 install -d -m 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
@@ -241,8 +246,10 @@ done
 pushd %{pkgname}_python2
 %endif # with_python
 
+%if 0%{with_python3}
 # install streamtcp man page
 install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
+%endif
 
 install -D -m 0644 contrib/libunbound.pc %{buildroot}/%{_libdir}/pkgconfig/libunbound.pc
 
@@ -342,13 +349,13 @@ pushd %{pkgname}_python2
 #pushd pythonmod
 #make test
 #popd
+%else
+pushd %{pkgname}
 %endif # with_python
 
 make check
 
-%if 0%{with_python}
 popd
-%endif # with_python
 
 %if 0%{with_python3}
 pushd %{pkgname}_python3
@@ -379,7 +386,9 @@ popd
 %{_sbindir}/unbound-control
 %{_sbindir}/unbound-control-setup
 %{_sbindir}/unbound-host
+#%if 0%{with_python3}
 %{_sbindir}/unbound-streamtcp
+#%endif
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %exclude %{_mandir}/man8/unbound-anchor*
@@ -432,6 +441,10 @@ popd
 
 
 %changelog
+* Wed Oct 26 2016 Ilya Evseev <evseev.i@cdnnow.ru> - 1.5.10-2
+- Bugfix building without python2 and python3
+- Fixup streamtcp build (Paul)
+
 * Tue Sep 27 2016 Paul Wouters <pwouters@redhat.com> - 1.5.10-1
 - Updated to 1.5.10 (better TCP handling, bugfixes)
 - Install pkgconfig file in -devel package
