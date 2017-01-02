@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.0
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -106,7 +106,6 @@ Requires(postun): /sbin/ldconfig
 Requires(postun): systemd
 Requires(preun): systemd
 Requires(pre): shadow-utils
-Requires: openssl-libs >= 0.9.8g-12
 
 %description libs
 Contains libraries used by the unbound server and client applications
@@ -441,6 +440,9 @@ popd
 
 
 %changelog
+* Mon Jan 02 2017 Paul Wouters <pwouters@redhat.com> - 1.6.0-3
+- Actually remove dependency because minimum is always satisfied
+
 * Mon Jan 02 2017 Paul Wouters <pwouters@redhat.com> - 1.6.0-2
 - Depend on openssl-libs, not opensl
 
