@@ -261,6 +261,7 @@ install -m 0644 %{SOURCE8} %{buildroot}%{_tmpfilesdir}/unbound.conf
 
 # install root - we keep a copy of the root key in old location,
 # in case user has changed the configuration and we wouldn't update it there
+install -m 0644 %{SOURCE5} %{buildroot}%{_sysconfdir}/unbound/
 install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/root.key
 
 # remove static library from install (fedora packaging guidelines)
@@ -432,7 +433,6 @@ popd
 %{_unitdir}/unbound-anchor.service
 %dir %attr(0755,unbound,unbound) %{_sharedstatedir}/%{name}
 %attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 # just left for backwards compat with user changed unbound.conf files - format is different!
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
 
