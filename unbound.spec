@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.0
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -30,7 +30,6 @@ Source2: unbound.conf
 Source3: unbound.munin
 Source4: unbound_munin_
 Source5: root.key
-Source6: dlv.isc.org.key
 Source7: unbound-keygen.service
 Source8: tmpfiles-unbound.conf
 Source9: example.com.key
@@ -260,9 +259,8 @@ popd
 install -d -m 0755 %{buildroot}%{_tmpfilesdir} %{buildroot}%{_sharedstatedir}/unbound
 install -m 0644 %{SOURCE8} %{buildroot}%{_tmpfilesdir}/unbound.conf
 
-# install root and DLV key - we keep a copy of the root key in old location,
+# install root - we keep a copy of the root key in old location,
 # in case user has changed the configuration and we wouldn't update it there
-install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
 install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/root.key
 
 # remove static library from install (fedora packaging guidelines)
@@ -440,6 +438,9 @@ popd
 
 
 %changelog
+* Wed Jan 18 2017 Paul Wouters <pwouters@redhat.com> - 1.6.0-4
+- Remove obsoleted DLV key
+
 * Mon Jan 02 2017 Paul Wouters <pwouters@redhat.com> - 1.6.0-3
 - Actually remove dependency because minimum is always satisfied
 
