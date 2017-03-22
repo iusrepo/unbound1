@@ -208,8 +208,7 @@ pushd %{pkgname}_python2
 %else
 pushd %{pkgname}
 %endif # with_python
-%{__make} DESTDIR=%{buildroot} install
-%{__make} DESTDIR=%{buildroot} unbound-event-install
+%{__make} DESTDIR=%{buildroot} unbound-event-install install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 %if 0%{with_python}
 popd
@@ -217,8 +216,7 @@ popd
 
 %if 0%{with_python3}
 pushd %{pkgname}_python3
-%{__make} DESTDIR=%{buildroot} install
-%{__make} DESTDIR=%{buildroot} unbound-event-install
+%{__make} DESTDIR=%{buildroot} unbound-event-install install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 popd
 %endif # with_python3
