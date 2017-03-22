@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.0
-Release: 5%{?extra_version:.%{extra_version}}%{?dist}
+Release: 6%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -209,6 +209,7 @@ pushd %{pkgname}_python2
 pushd %{pkgname}
 %endif # with_python
 %{__make} DESTDIR=%{buildroot} install
+%{__make} DESTDIR=%{buildroot} unbound-event-install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 %if 0%{with_python}
 popd
@@ -217,6 +218,7 @@ popd
 %if 0%{with_python3}
 pushd %{pkgname}_python3
 %{__make} DESTDIR=%{buildroot} install
+%{__make} DESTDIR=%{buildroot} unbound-event-install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 popd
 %endif # with_python3
@@ -418,6 +420,7 @@ popd
 %files devel
 %{_libdir}/libunbound.so
 %{_includedir}/unbound.h
+%{_includedir}/unbound-event.h
 %{_mandir}/man3/*
 %{_libdir}/pkgconfig/*.pc
 
@@ -438,6 +441,9 @@ popd
 
 
 %changelog
+* Wed Mar 22 2017 Paul Wouters <pwouters@redhat.com> - 1.6.0-6
+- Call make unbound-event-install to install unbound-event.h
+
 * Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.6.0-5
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
 
