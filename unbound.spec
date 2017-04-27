@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.6.0
-Release: 6%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.6.2
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -439,6 +439,10 @@ popd
 
 
 %changelog
+* Wed Apr 26 2017 Paul Wouters <pwouters@redhat.com> - 1.6.2-1
+- Update to 1.6.2 (rhbz#1425649)
+- Updated unbound.conf with new options
+
 * Wed Mar 22 2017 Paul Wouters <pwouters@redhat.com> - 1.6.0-6
 - Call make unbound-event-install to install unbound-event.h
 
