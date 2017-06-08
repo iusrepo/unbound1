@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.2
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -42,6 +42,8 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+
+Patch1: unbound-1.6.2-permissive.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -135,6 +137,9 @@ Python 3 modules and extensions for unbound
 %prep
 %{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
 %setup -qcn %{pkgname}
+pushd %{pkgname}
+%patch1 -p1
+popd
 
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
@@ -439,6 +444,9 @@ popd
 
 
 %changelog
+* Thu Jun 08 2017 Paul Wouters <pwouters@redhat.com> - 1.6.2-2
+- Patch for cmd: unbound-control set_option val-permissive-mode: yes
+
 * Wed Apr 26 2017 Paul Wouters <pwouters@redhat.com> - 1.6.2-1
 - Update to 1.6.2 (rhbz#1425649)
 - Updated unbound.conf with new options
