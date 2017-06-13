@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.6.2
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.6.3
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -444,6 +444,9 @@ popd
 
 
 %changelog
+* Tue Jun 13 2017 Paul Wouters <pwouters@redhat.com> - 1.6.3-1
+- Updated to 1.6.3 (fixes assertion failure when receiving malformed packet with 0x20 enabled)
+
 * Thu Jun 08 2017 Paul Wouters <pwouters@redhat.com> - 1.6.2-2
 - Patch for cmd: unbound-control set_option val-permissive-mode: yes
 
