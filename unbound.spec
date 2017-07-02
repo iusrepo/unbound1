@@ -16,12 +16,12 @@
 
 %global _hardened_build 1
 
-%global extra_version rc2
+#global extra_version rc1
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.4
-Release: 0%{?extra_version:.%{extra_version}}%{?dist}
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -42,6 +42,8 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+
+Patch1: unbound-1.6.4-ipsechook-check.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -135,6 +137,9 @@ Python 3 modules and extensions for unbound
 %prep
 %{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
 %setup -qcn %{pkgname}
+pushd %{pkgname}
+%patch1 -p1
+popd
 
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
@@ -440,6 +445,10 @@ popd
 
 
 %changelog
+* Sun Jul 02 2017 Paul Wouters <pwouters@redhat.com> - 1.6.4-1
+- Updated to 1.6.4 full release, patch to allow missing ipsechook
+- Resolves rhbz#1465575 unbound fails to start up, complains about missing ipsecmod-hook
+
 * Thu Jun 22 2017 Paul Wouters <pwouters@redhat.com> - 1.6.4-0.rc2
 - Update to 1.6.4 (esubnet, ipsecmod support, bugfixes)
 
