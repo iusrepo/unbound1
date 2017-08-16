@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.4
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -439,12 +439,15 @@ popd
 %{_unitdir}/unbound-anchor.timer
 %{_unitdir}/unbound-anchor.service
 %dir %attr(0755,unbound,unbound) %{_sharedstatedir}/%{name}
-%attr(0644,unbound,unbound) %config(noreplace) %{_sharedstatedir}/%{name}/root.key
+%attr(0644,unbound,unbound) %config %{_sharedstatedir}/%{name}/root.key
 # just left for backwards compat with user changed unbound.conf files - format is different!
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/root.key
-
+%attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Wed Aug 16 2017 Paul Wouters <pwouters@redhat.com> - 1.6.4-4
+- Rebuilt with KSK2017 added to root.key and root.anchor
+- Remove noreplace for root key files. We can only improve these files over local copies
+
 * Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.6.4-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
 
