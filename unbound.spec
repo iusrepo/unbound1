@@ -23,8 +23,8 @@ Name: unbound
 Version: 1.6.4
 Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
-Url: http://www.nlnetlabs.nl/unbound/
-Source: http://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
+Url: https://www.unbound.net/
+Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
 Source1: unbound.service
 Source2: unbound.conf
 Source3: unbound.munin
@@ -35,7 +35,7 @@ Source8: tmpfiles-unbound.conf
 Source9: example.com.key
 Source10: example.com.conf
 Source11: block-example.com.conf
-# From http://data.iana.org/root-anchors/icannbundle.pem
+# From https://data.iana.org/root-anchors/icannbundle.pem
 Source12: icannbundle.pem
 Source13: root.anchor
 Source14: unbound.sysconfig
