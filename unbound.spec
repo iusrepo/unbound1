@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.6.4
-Release: 4%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.6.6
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -42,8 +42,6 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
-
-Patch1: unbound-1.6.4-ipsechook-check.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -137,9 +135,6 @@ Python 3 modules and extensions for unbound
 %prep
 %{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
 %setup -qcn %{pkgname}
-pushd %{pkgname}
-%patch1 -p1
-popd
 
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
@@ -444,6 +439,10 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Fri Sep 22 2017 Paul Wouters <pwouters@redhat.com> - 1.6.6-1
+- Resolves: rhbz#1483572 unbound-1.6.6 is available
+- Resolves: rhbz#1465575 unbound fails to start up, complains about missing ipsecmod-hook (edit) 
+
 * Wed Aug 16 2017 Paul Wouters <pwouters@redhat.com> - 1.6.4-4
 - Rebuilt with KSK2017 added to root.key and root.anchor
 - Remove noreplace for root key files. We can only improve these files over local copies
