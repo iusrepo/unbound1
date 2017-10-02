@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.6
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -439,6 +439,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Oct 02 2017 Paul Wouters <pwouters@redhat.com> - 1.6.6-2
+- Enable RFC 8145 Trust Anchor Signaling to help the root zone get keytag statistics
+
 * Fri Sep 22 2017 Paul Wouters <pwouters@redhat.com> - 1.6.6-1
 - Resolves: rhbz#1483572 unbound-1.6.6 is available
 - Resolves: rhbz#1465575 unbound fails to start up, complains about missing ipsecmod-hook (edit) 
