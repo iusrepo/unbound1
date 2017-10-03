@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.6
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -35,8 +35,7 @@ Source8: tmpfiles-unbound.conf
 Source9: example.com.key
 Source10: example.com.conf
 Source11: block-example.com.conf
-# From https://data.iana.org/root-anchors/icannbundle.pem
-Source12: icannbundle.pem
+Source12: https://data.iana.org/root-anchors/icannbundle.pem
 Source13: root.anchor
 Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
@@ -439,6 +438,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue Oct 03 2017 Petr Menšík <pemensik@redhat.com> - 1.6.6-3
+- Update icannbundle.pem
+
 * Mon Oct 02 2017 Paul Wouters <pwouters@redhat.com> - 1.6.6-2
 - Enable RFC 8145 Trust Anchor Signaling to help the root zone get keytag statistics
 
