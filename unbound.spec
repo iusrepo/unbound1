@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.7
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -109,14 +109,15 @@ Requires(pre): shadow-utils
 Contains libraries used by the unbound server and client applications
 
 %if 0%{with_python}
-%package -n python-unbound
+%package -n python2-unbound
+%{?python_provide:%python_provide python2-unbound}
 Summary: Python 2 modules and extensions for unbound
 Group: Applications/System
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: unbound-python = %{version}-%{release}
 Obsoletes: unbound-python < %{version}-%{release}
 
-%description -n python-unbound
+%description -n python2-unbound
 Python 2 modules and extensions for unbound
 %endif # with_python
 
@@ -393,7 +394,7 @@ popd
 %{_mandir}/man8/*
 
 %if 0%{with_python}
-%files -n python-unbound
+%files -n python2-unbound
 %license pythonmod/LICENSE
 %{python2_sitearch}/*
 %doc libunbound/python/examples/*
@@ -438,6 +439,10 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Sun Dec 17 2017 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1.6.7-2
+- Python 2 binary package renamed to python2-unbound
+  See https://fedoraproject.org/wiki/FinalizingFedoraSwitchtoPython3
+
 * Thu Oct 12 2017 Paul Wouters <pwouters@redhat.com> - 1.6.7-1
 - Updated to 1.6.7 (minor bugfixes)
 
