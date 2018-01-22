@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.6.7
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.6.8
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -385,9 +385,7 @@ popd
 %{_sbindir}/unbound-control
 %{_sbindir}/unbound-control-setup
 %{_sbindir}/unbound-host
-#%if 0%{with_python3}
 %{_sbindir}/unbound-streamtcp
-#%endif
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %exclude %{_mandir}/man8/unbound-anchor*
@@ -439,6 +437,11 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Jan 22 2018 Paul Wouters <pwouters@redhat.com> - 1.6.8-1
+- Resolves rhbz#1483572 unbound-1.6.8 is available
+- Resolves rhbz#1507049 CVE-2017-15105 unbound: Improper validation of wildcard synthesized NSEC records
+- Resolves rhbz#1536518 CVE-2017-15105 unbound: Improper validation of wildcard synthesized NSEC records [fedora-all]
+
 * Sun Dec 17 2017 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1.6.7-2
 - Python 2 binary package renamed to python2-unbound
   See https://fedoraproject.org/wiki/FinalizingFedoraSwitchtoPython3
