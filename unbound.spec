@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.8
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -437,6 +437,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Fri Feb 09 2018 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1.6.8-2
+- Escape macros in %%changelog
+
 * Mon Jan 22 2018 Paul Wouters <pwouters@redhat.com> - 1.6.8-1
 - Resolves rhbz#1483572 unbound-1.6.8 is available
 - Resolves rhbz#1507049 CVE-2017-15105 unbound: Improper validation of wildcard synthesized NSEC records
@@ -570,7 +573,7 @@ popd
 
 * Thu Jul 16 2015 Tomas Hozza <thozza@redhat.com> - 1.5.4-2
 - Start unbound-anchor.timer only on new installations
-- Rename root.anchor to root.key in %post section
+- Rename root.anchor to root.key in %%post section
 
 * Tue Jul 14 2015 Paul Wouters <pwouters@redhat.com> - 1.5.4-1
 - Update to 1.5.4
