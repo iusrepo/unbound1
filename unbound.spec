@@ -158,13 +158,11 @@ cp -a %{pkgname}_python2 %{pkgname}_python3
 %build
 # This is needed to rebuild the configure script to support Python 3.x
 # autoreconf -iv
-export LDFLAGS="-Wl,-z,relro,-z,now -pie -specs=/usr/lib/rpm/redhat/redhat-hardened-ld"
-export CFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
-export CXXFLAGS="$RPM_OPT_FLAGS -fPIE -pie"
 
 # ./configure script common arguments
 %global configure_args --with-libevent --with-pthreads --with-ssl \\\
             --disable-rpath --disable-static \\\
+            --enable-relro-now --enable-pie \\\
             --enable-subnet --enable-ipsecmod \\\
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \\\
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \\\
@@ -439,6 +437,7 @@ popd
 %changelog
 * Wed Feb 21 2018 Petr Menšík <pemensik@redhat.com> - 1.6.8-4
 - Remove group writable bit from some config files (#1528445)
+- Use default RPM build flags and configure parameters (#1539097)
 
 * Wed Feb 14 2018 Filipe Rosset <rosset.filipe@gmail.com> - 1.6.8-3
 - rebuilt due new libevent 2.1.8
