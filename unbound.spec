@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.6.8
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -375,11 +375,11 @@ popd
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/keys.d
-%attr(0664,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d/*.key
+%attr(0644,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/keys.d/*.key
 %dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/conf.d
-%attr(0664,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d/*.conf
+%attr(0644,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d/*.conf
 %dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/local.d
-%attr(0664,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d/*.conf
+%attr(0644,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d/*.conf
 %{_sbindir}/unbound
 %{_sbindir}/unbound-checkconf
 %{_sbindir}/unbound-control
@@ -437,6 +437,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Wed Feb 21 2018 Petr Menšík <pemensik@redhat.com> - 1.6.8-4
+- Remove group writable bit from some config files (#1528445)
+
 * Wed Feb 14 2018 Filipe Rosset <rosset.filipe@gmail.com> - 1.6.8-3
 - rebuilt due new libevent 2.1.8
 
