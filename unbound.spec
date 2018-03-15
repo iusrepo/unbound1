@@ -20,8 +20,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.6.8
-Release: 6%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.7.0
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -435,6 +435,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Thu Mar 15 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-1
+- Updated to 1.7.0 (aggressive nsec, local root support, bugfixes)
+
 * Thu Feb 22 2018 Petr Menšík <pemensik@redhat.com> - 1.6.8-6
 - Uncomment again original max-upd-size
 
