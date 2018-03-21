@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.0
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -41,6 +41,8 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+
+Patch1: unbound-1.7.0-aggrnsec.patch
 
 Group: System Environment/Daemons
 BuildRequires: flex, openssl-devel
@@ -139,8 +141,10 @@ Python 3 modules and extensions for unbound
 %if 0%{with_python}
 mv %{pkgname} %{pkgname}_python2
 pushd %{pkgname}_python2
+%patch1 -p1
 %else
 pushd %{pkgname}
+%patch1 -p1
 %endif # with_python
 
 # only for snapshots
@@ -435,6 +439,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Wed Mar 21 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-2
+- Patch for broken Aggressive NSEC + stub-zone configuration causing NXDOMAIN at TTL expiry
+
 * Thu Mar 15 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-1
 - Updated to 1.7.0 (aggressive nsec, local root support, bugfixes)
 
