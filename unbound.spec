@@ -21,7 +21,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.0
-Release: 4%{?extra_version:.%{extra_version}}%{?dist}
+Release: 5%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -46,7 +46,7 @@ Patch1: unbound-1.7.0-aggrnsec.patch
 Patch2: unbound-1.7.0-ref.patch
 Patch3: unbound-1.7.0-prefetch.patch
 
-Group: System Environment/Daemons
+BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
 BuildRequires: pkgconfig
@@ -61,9 +61,7 @@ BuildRequires: systemd
 # BuildRequires: bison
 # BuildRequires: automake autoconf libtool
 
-Requires(post): systemd
-Requires(preun): systemd
-Requires(postun): systemd
+%{?systemd_requires}
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
@@ -445,11 +443,16 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Apr 09 2018 Petr Menšík <pemensik@redhat.com> - 1.7.0-5
+- Require gcc and make on build
+- Remove group, simplify systemd requires
+
 * Mon Apr 09 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-4
 - Patch for prefetching after flushing cache
 
 * Fri Apr 06 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-3
 - Patch for referral with auth-zone: response
+
 
 * Wed Mar 21 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-2
 - Patch for broken Aggressive NSEC + stub-zone configuration causing NXDOMAIN at TTL expiry
