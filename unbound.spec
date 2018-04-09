@@ -15,10 +15,10 @@
 %endif # with_python3
 
 %if 0%{with_python2} && 0%{with_python3}
-%global dir_primary %{pkgname}_python2
-%global python_primary %{__python2}
-%global dir_secondary %{pkgname}_python3
-%global python_secondary %{__python3}
+%global dir_primary %{pkgname}_python3
+%global python_primary %{__python3}
+%global dir_secondary %{pkgname}_python2
+%global python_secondary %{__python2}
 %else
 %global dir_primary %{pkgname}
 %endif # with_python2 && with_python3
@@ -217,17 +217,18 @@ popd
 
 %install
 install -p -m 0644 %{SOURCE16} .
+
+%if 0%{?python_secondary:1}
+# install first secondary build. It will be overwritten by primary
+pushd %{dir_secondary}
+%{__make} DESTDIR=%{buildroot} unbound-event-install install
+popd
+%endif # python_secondary
+
 pushd %{dir_primary}
 %{__make} DESTDIR=%{buildroot} unbound-event-install install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 popd
-
-%if 0%{?python_secondary:1}
-pushd %{dir_secondary}
-%{__make} DESTDIR=%{buildroot} unbound-event-install install
-install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
-popd
-%endif # with_python3
 
 install -d -m 0755 %{buildroot}%{_unitdir} %{buildroot}%{_sysconfdir}/sysconfig
 install -p -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/unbound.service
@@ -248,20 +249,11 @@ for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unboun
 done
 %endif
 
-%if 0%{?python_primary:1}
 pushd %{dir_primary}
-%endif # python_primary
-
-%if 0%{?python_secondary:1}
 # install streamtcp man page
 install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
-%endif
-
 install -D -m 0644 contrib/libunbound.pc %{buildroot}/%{_libdir}/pkgconfig/libunbound.pc
-
-%if 0%{?python_primary:1}
 popd
-%endif # python_primary
 
 # Install tmpfiles.d config
 install -d -m 0755 %{buildroot}%{_tmpfilesdir} %{buildroot}%{_sharedstatedir}/unbound
@@ -442,7 +434,7 @@ popd
 * Mon Apr 09 2018 Petr Menšík <pemensik@redhat.com> - 1.7.0-5
 - Require gcc and make on build
 - Remove group, simplify systemd requires
-- Simplify building with single python version
+- Simplify building with single python version, make python3 primary
 
 * Mon Apr 09 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-4
 - Patch for prefetching after flushing cache
