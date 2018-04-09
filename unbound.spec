@@ -1,22 +1,44 @@
-%{?!with_python:      %global with_python      1}
+%{?!with_python2:     %global with_python2     1}
 %{?!with_python3:     %global with_python3     1}
 %{?!with_munin:       %global with_munin       1}
-
-%if 0%{with_python} == 0
-# if not building Python, don't build Python3
-%global with_python3 0
-%else # with_python
-# needed just for EPEL
-%if 0%{?rhel} <= 6
-%{!?__python2: %global __python2 /usr/bin/python2}
-%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
-%endif # rhel <= 6
-%endif # with_python
 
 %global _hardened_build 1
 
 #global extra_version rc1
+
+%if 0%{with_python2}
+%global python_primary %{__python2}
+%endif # with_python2
+
+%if 0%{with_python3}
+%global python_primary %{__python3}
+%endif # with_python3
+
+%if 0%{with_python2} && 0%{with_python3}
+%global dir_primary %{pkgname}_python2
+%global python_primary %{__python2}
+%global dir_secondary %{pkgname}_python3
+%global python_secondary %{__python3}
+%else
+%global dir_primary %{pkgname}
+%endif # with_python2 && with_python3
+
+%if 0%{?rhel}
+%global with_munin   0
+
+%if 0%{?with_python2} && 0%{?rhel} <= 6
+# needed just for EPEL
+%{!?__python2: %global __python2 /usr/bin/python2}
+%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
+%endif # with_python2 && rhel <= 6
+
+%if 0%{?rhel} <= 7
+%global with_python3 0
+%else
+%global with_python2 0
+%endif # rhel <= 7
+%endif # rhel
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
@@ -50,11 +72,11 @@ BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
 BuildRequires: pkgconfig
-%if 0%{with_python}
+%if 0%{with_python2}
 BuildRequires: python2-devel swig
 %endif # with_python
 %if 0%{with_python3}
-BuildRequires: python3-devel
+BuildRequires: python3-devel swig
 %endif # with_python3
 BuildRequires: systemd
 # Required for SVN versions
@@ -110,7 +132,7 @@ Requires(pre): shadow-utils
 %description libs
 Contains libraries used by the unbound server and client applications
 
-%if 0%{with_python}
+%if 0%{with_python2}
 %package -n python2-unbound
 %{?python_provide:%python_provide python2-unbound}
 Summary: Python 2 modules and extensions for unbound
@@ -138,18 +160,10 @@ Python 3 modules and extensions for unbound
 %{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
 %setup -qcn %{pkgname}
 
-%if 0%{with_python}
-mv %{pkgname} %{pkgname}_python2
-pushd %{pkgname}_python2
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%else
 pushd %{pkgname}
 %patch1 -p1
 %patch2 -p1
-%patch3 -p0
-%endif # with_python
+%patch3 -p1
 
 # only for snapshots
 # autoreconf -iv
@@ -158,10 +172,10 @@ pushd %{pkgname}
 cp -pr doc pythonmod libunbound ../
 popd
 
-%if 0%{?with_python3}
-cp -a %{pkgname}_python2 %{pkgname}_python3
-%endif # with_python3
-
+%if 0%{with_python2} && 0%{with_python3}
+mv %{pkgname} %{dir_primary}
+cp -a %{dir_primary} %{dir_secondary}
+%endif
 
 %build
 # This is needed to rebuild the configure script to support Python 3.x
@@ -177,52 +191,39 @@ cp -a %{pkgname}_python2 %{pkgname}_python3
             --enable-sha2 --disable-gost --enable-ecdsa \\\
             --with-rootkey-file=%{_sharedstatedir}/unbound/root.key
 
-%if 0%{with_python}
-pushd %{pkgname}_python2
-%else
-pushd %{pkgname}
-%endif # with_python
+pushd %{dir_primary}
 
 %configure  \
-%if %{with_python}
-            --with-pythonmodule --with-pyunbound PYTHON=%{__python2} \
-%endif # with_python
+%if 0%{?python_primary:1}
+            --with-pythonmodule --with-pyunbound PYTHON=%{python_primary} \
+%endif # python_primary
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
 %{__make} %{?_smp_mflags} streamtcp
 
-%if 0%{with_python}
 popd
-%endif # with_python
 
-%if 0%{with_python3}
-pushd %{pkgname}_python3
+%if 0%{?python_secondary:1}
+pushd %{dir_secondary}
 %configure  \
-            --with-pythonmodule --with-pyunbound PYTHON=%{__python3} \
+            --with-pythonmodule --with-pyunbound PYTHON=%{python_secondary} \
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
-%{__make} %{?_smp_mflags} streamtcp
 popd
-%endif # with_python3
+%endif # python_secondary
 
 
 %install
 install -p -m 0644 %{SOURCE16} .
-%if 0%{with_python}
-pushd %{pkgname}_python2
-%else
-pushd %{pkgname}
-%endif # with_python
+pushd %{dir_primary}
 %{__make} DESTDIR=%{buildroot} unbound-event-install install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
-%if 0%{with_python}
 popd
-%endif # with_python
 
-%if 0%{with_python3}
-pushd %{pkgname}_python3
+%if 0%{?python_secondary:1}
+pushd %{dir_secondary}
 %{__make} DESTDIR=%{buildroot} unbound-event-install install
 install -m 0755 streamtcp %{buildroot}%{_sbindir}/unbound-streamtcp
 popd
@@ -247,20 +248,20 @@ for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unboun
 done
 %endif
 
-%if 0%{with_python}
-pushd %{pkgname}_python2
-%endif # with_python
+%if 0%{?python_primary:1}
+pushd %{dir_primary}
+%endif # python_primary
 
-%if 0%{with_python3}
+%if 0%{?python_secondary:1}
 # install streamtcp man page
 install -m 0644 testcode/streamtcp.1 %{buildroot}/%{_mandir}/man1/unbound-streamtcp.1
 %endif
 
 install -D -m 0644 contrib/libunbound.pc %{buildroot}/%{_libdir}/pkgconfig/libunbound.pc
 
-%if 0%{with_python}
+%if 0%{?python_primary:1}
 popd
-%endif # with_python
+%endif # python_primary
 
 # Install tmpfiles.d config
 install -d -m 0755 %{buildroot}%{_tmpfilesdir} %{buildroot}%{_sharedstatedir}/unbound
@@ -275,7 +276,7 @@ install -m 0644 %{SOURCE13} %{buildroot}%{_sharedstatedir}/unbound/root.key
 rm %{buildroot}%{_libdir}/*.la
 
 
-%if 0%{with_python}
+%if 0%{with_python2}
 rm %{buildroot}%{python2_sitearch}/*.la
 %endif # with_python
 
@@ -348,28 +349,23 @@ fi
 /bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
 
 %check
-%if 0%{with_python}
-pushd %{pkgname}_python2
-
+pushd %{dir_primary}
 #pushd pythonmod
 #make test
 #popd
-%else
-pushd %{pkgname}
-%endif # with_python
 
 make check
 
 popd
 
-%if 0%{with_python3}
-pushd %{pkgname}_python3
+%if 0%{?python_secondary:1}
+pushd %{dir_secondary}
 #pushd pythonmod
 #make test
 #popd
 make check
 popd
-%endif # with_python3
+%endif # python_secondary
 
 
 %files
@@ -397,7 +393,7 @@ popd
 %exclude %{_mandir}/man8/unbound-anchor*
 %{_mandir}/man8/*
 
-%if 0%{with_python}
+%if 0%{with_python2}
 %files -n python2-unbound
 %license pythonmod/LICENSE
 %{python2_sitearch}/*
@@ -446,6 +442,7 @@ popd
 * Mon Apr 09 2018 Petr Menšík <pemensik@redhat.com> - 1.7.0-5
 - Require gcc and make on build
 - Remove group, simplify systemd requires
+- Simplify building with single python version
 
 * Mon Apr 09 2018 Paul Wouters <pwouters@redhat.com> - 1.7.0-4
 - Patch for prefetching after flushing cache
