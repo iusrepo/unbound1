@@ -14,15 +14,6 @@
 %global python_primary %{__python3}
 %endif # with_python3
 
-%if 0%{with_python2} && 0%{with_python3}
-%global dir_primary %{pkgname}_python3
-%global python_primary %{__python3}
-%global dir_secondary %{pkgname}_python2
-%global python_secondary %{__python2}
-%else
-%global dir_primary %{pkgname}
-%endif # with_python2 && with_python3
-
 %if 0%{?rhel}
 %global with_munin   0
 
@@ -157,7 +148,17 @@ Python 3 modules and extensions for unbound
 
 
 %prep
-%{?extra_version:%global pkgname %{name}-%{version}%{extra_version}}%{!?extra_version:%global pkgname %{name}-%{version}}
+%global pkgname %{name}-%{version}%{?extra_version}
+
+%if 0%{with_python2} && 0%{with_python3}
+%global dir_primary %{pkgname}_python3
+%global python_primary %{__python3}
+%global dir_secondary %{pkgname}_python2
+%global python_secondary %{__python2}
+%else
+%global dir_primary %{pkgname}
+%endif # with_python2 && with_python3
+
 %setup -qcn %{pkgname}
 
 pushd %{pkgname}
