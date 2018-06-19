@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.2
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -428,6 +428,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue Jun 19 2018 Miro Hrončok <mhroncok@redhat.com> - 1.7.2-2
+- Rebuilt for Python 3.7
+
 * Mon Jun 11 2018 Paul Wouters <pwouters@redhat.com> - 1.7.2-1
 - Resolves rhbz#1589807 unbound-1.7.2 is available
 - Add patch to fix stub/forward zone not returning ServFail when TTL expires
