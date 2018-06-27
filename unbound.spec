@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.2
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -56,6 +56,8 @@ Source16: unbound-munin.README
 Source17: unbound-anchor.service
 
 Patch1: unbound-1.7.2-stub-fwd-ttl.patch
+Patch2: unbound-1.7.2-python3-devel.patch
+Patch3: unbound-1.7.2-python3-pkgconfig.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -161,6 +163,8 @@ Python 3 modules and extensions for unbound
 
 pushd %{pkgname}
 %patch1 -p1
+%patch2 -p1 -b .python3
+%patch3 -p1 -b .python3
 
 # only for snapshots
 # autoreconf -iv
@@ -428,6 +432,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Wed Jun 27 2018 Petr Menšík <pemensik@redhat.com> - 1.7.2-3
+- Remove last python2 dependency from python3 build
+
 * Tue Jun 19 2018 Miro Hrončok <mhroncok@redhat.com> - 1.7.2-2
 - Rebuilt for Python 3.7
 
