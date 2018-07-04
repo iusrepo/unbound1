@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.3
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -57,6 +57,7 @@ Source17: unbound-anchor.service
 
 Patch2: unbound-1.7.2-python3-devel.patch
 Patch3: unbound-1.7.2-python3-pkgconfig.patch
+Patch4: unbound-1.7.3-anchor-fallback.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -163,6 +164,7 @@ Python 3 modules and extensions for unbound
 pushd %{pkgname}
 %patch2 -p1 -b .python3
 %patch3 -p1 -b .python3
+%patch4 -p1 -b .anchor-fallback
 
 # only for snapshots
 # autoreconf -iv
@@ -430,6 +432,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Wed Jul 04 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-3
+- Update trust anchors also behind firewall (#1598078)
+
 * Mon Jul 02 2018 Miro Hrončok <mhroncok@redhat.com> - 1.7.3-2
 - Rebuilt for Python 3.7
 

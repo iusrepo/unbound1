@@ -11,7 +11,7 @@ Wants=nss-lookup.target
 Type=simple
 EnvironmentFile=-/etc/sysconfig/unbound
 ExecStartPre=/usr/sbin/unbound-checkconf
-ExecStartPre=-/usr/sbin/unbound-anchor -a /var/lib/unbound/root.key -c /etc/unbound/icannbundle.pem
+ExecStartPre=-/usr/sbin/unbound-anchor -a /var/lib/unbound/root.key -c /etc/unbound/icannbundle.pem -f /etc/resolv.conf -R
 ExecStart=/usr/sbin/unbound -d $UNBOUND_OPTIONS
 ExecReload=/usr/sbin/unbound-control reload
 
