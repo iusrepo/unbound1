@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.3
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Release: 4%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -113,11 +113,7 @@ The devel package contains the unbound library and the include files
 %package libs
 Summary: Libraries used by the unbound server and client applications
 Group: Applications/System
-Requires(post): /sbin/ldconfig
-Requires(post): systemd
-Requires(postun): /sbin/ldconfig
-Requires(postun): systemd
-Requires(preun): systemd
+%{?systemd_requires}
 Requires(pre): shadow-utils
 
 %description libs
@@ -307,7 +303,7 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 %systemd_post unbound-keygen.service
 
 %post libs
-/sbin/ldconfig
+%{?ldconfig}
 %systemd_post unbound-anchor.timer
 # start the timer only if installing the package to prevent starting it, if it was stopped on purpose
 if [ "$1" -eq 1 ]; then
@@ -327,7 +323,7 @@ fi
 %systemd_postun unbound-keygen.service
 
 %postun libs
-/sbin/ldconfig
+%{?ldconfig}
 %systemd_postun_with_restart unbound-anchor.timer
 
 %triggerun -- unbound < 1.4.12-4
@@ -432,6 +428,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Jul 09 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-4
+- Do not call ldconfig if possible
+
 * Wed Jul 04 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-3
 - Update trust anchors also behind firewall (#1598078)
 
