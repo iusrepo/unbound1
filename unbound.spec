@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.3
-Release: 5%{?extra_version:.%{extra_version}}%{?dist}
+Release: 6%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -371,6 +371,10 @@ popd
 %attr(0644,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/conf.d/*.conf
 %dir %attr(0755,root,unbound) %{_sysconfdir}/%{name}/local.d
 %attr(0644,root,unbound) %config(noreplace) %{_sysconfdir}/%{name}/local.d/*.conf
+%ghost %attr(0640,root,unbound) %{_sysconfdir}/%{name}/unbound_control.pem
+%ghost %attr(0640,root,unbound) %{_sysconfdir}/%{name}/unbound_control.key
+%ghost %attr(0640,root,unbound) %{_sysconfdir}/%{name}/unbound_server.pem
+%ghost %attr(0640,root,unbound) %{_sysconfdir}/%{name}/unbound_server.key
 %{_sbindir}/unbound
 %{_sbindir}/unbound-checkconf
 %{_sbindir}/unbound-control
@@ -428,6 +432,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Wed Jul 18 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-6
+- Cleanup generated client and server keys (#1601773)
+
 * Sat Jul 14 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1.7.3-5
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
 
