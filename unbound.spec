@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.3
-Release: 6%{?extra_version:.%{extra_version}}%{?dist}
+Release: 7%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -92,7 +92,6 @@ as a server, but are linked into an application) are easily possible.
 %if %{with_munin}
 %package munin
 Summary: Plugin for the munin / munin-node monitoring package
-Group:     System Environment/Daemons
 Requires: munin-node
 Requires: %{name} = %{version}-%{release}, bc
 BuildArch: noarch
@@ -103,7 +102,6 @@ Plugin for the munin / munin-node monitoring package
 
 %package devel
 Summary: Development package that includes the unbound header files
-Group: Development/Libraries
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}, openssl-devel
 Requires: pkgconfig
 
@@ -112,7 +110,6 @@ The devel package contains the unbound library and the include files
 
 %package libs
 Summary: Libraries used by the unbound server and client applications
-Group: Applications/System
 %{?systemd_requires}
 Requires(pre): shadow-utils
 
@@ -123,7 +120,6 @@ Contains libraries used by the unbound server and client applications
 %package -n python2-unbound
 %{?python_provide:%python_provide python2-unbound}
 Summary: Python 2 modules and extensions for unbound
-Group: Applications/System
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: unbound-python = %{version}-%{release}
 Obsoletes: unbound-python < %{version}-%{release}
@@ -135,7 +131,6 @@ Python 2 modules and extensions for unbound
 %if 0%{with_python3}
 %package -n python3-unbound
 Summary: Python 3 modules and extensions for unbound
-Group: Applications/System
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 %description -n python3-unbound
@@ -432,6 +427,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Jul 23 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-7
+- Remove unused Group tag
+
 * Wed Jul 18 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-6
 - Cleanup generated client and server keys (#1601773)
 
