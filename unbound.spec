@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.3
-Release: 7%{?extra_version:.%{extra_version}}%{?dist}
+Release: 8%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -58,6 +58,7 @@ Source17: unbound-anchor.service
 Patch2: unbound-1.7.2-python3-devel.patch
 Patch3: unbound-1.7.2-python3-pkgconfig.patch
 Patch4: unbound-1.7.3-anchor-fallback.patch
+Patch5: unbound-1.7.3-host-any.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -156,6 +157,7 @@ pushd %{pkgname}
 %patch2 -p1 -b .python3
 %patch3 -p1 -b .python3
 %patch4 -p1 -b .anchor-fallback
+%patch5 -p1 -b .host-any
 
 # only for snapshots
 # autoreconf -iv
@@ -427,6 +429,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue Jul 31 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-8
+- Release memory in unbound-host
+
 * Mon Jul 23 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-7
 - Remove unused Group tag
 
