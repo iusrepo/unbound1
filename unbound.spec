@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.7.3
-Release: 8%{?extra_version:.%{extra_version}}%{?dist}
+Release: 9%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -429,6 +429,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue Aug 14 2018 Paul Wouters <pwouters@redhat.com> - 1.7.3-9
+- Fix for restarting unbound service after deleting key/pem files for remote control
+
 * Tue Jul 31 2018 Petr Menšík <pemensik@redhat.com> - 1.7.3-8
 - Release memory in unbound-host
 
