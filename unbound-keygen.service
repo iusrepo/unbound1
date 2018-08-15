@@ -2,10 +2,10 @@
 Description=Unbound Control Key And Certificate Generator
 After=syslog.target 
 Before=unbound.service
-ConditionPathExists=!/etc/unbound/unbound_control.pem
-ConditionPathExists=!/etc/unbound/unbound_control.key
-ConditionPathExists=!/etc/unbound/unbound_server.pem
-ConditionPathExists=!/etc/unbound/unbound_server.key
+ConditionPathExists=|!/etc/unbound/unbound_control.pem
+ConditionPathExists=|!/etc/unbound/unbound_control.key
+ConditionPathExists=|!/etc/unbound/unbound_server.pem
+ConditionPathExists=|!/etc/unbound/unbound_server.key
 PartOf=unbound.service
 
 [Service]
