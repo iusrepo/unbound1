@@ -4,7 +4,7 @@
 
 %global _hardened_build 1
 
-#global extra_version rc1
+#%%global extra_version rc1
 
 %if 0%{with_python2}
 %global python_primary %{__python2}
@@ -33,7 +33,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.7.3
+Version: 1.8.0
 Release: 9%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
@@ -54,11 +54,6 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
-
-Patch2: unbound-1.7.2-python3-devel.patch
-Patch3: unbound-1.7.2-python3-pkgconfig.patch
-Patch4: unbound-1.7.3-anchor-fallback.patch
-Patch5: unbound-1.7.3-host-any.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -154,10 +149,6 @@ Python 3 modules and extensions for unbound
 %setup -qcn %{pkgname}
 
 pushd %{pkgname}
-%patch2 -p1 -b .python3
-%patch3 -p1 -b .python3
-%patch4 -p1 -b .anchor-fallback
-%patch5 -p1 -b .host-any
 
 # only for snapshots
 # autoreconf -iv
