@@ -33,8 +33,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.8.0
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.8.1
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -54,8 +54,6 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
-
-Patch1: unbound-1.8.0-rh1633874.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -151,8 +149,6 @@ Python 3 modules and extensions for unbound
 %setup -qcn %{pkgname}
 
 pushd %{pkgname}
-
-%patch1 -p1 -b .rh1633874
 
 # only for snapshots
 # autoreconf -iv
@@ -424,6 +420,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Oct 08 2018 Petr Menšík <pemensik@redhat.com> - 1.8.1-1
+- Update to 1.8.1
+
 * Mon Oct 01 2018 Petr Menšík <pemensik@redhat.com> - 1.8.0-2
 - Skip ipv6 forwarders without ipv6 support (#1633874)
 
