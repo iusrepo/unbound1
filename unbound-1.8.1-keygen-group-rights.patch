@@ -1,0 +1,29 @@
+From 6429b5c298b10b96feb6b90c111948df97269f40 Mon Sep 17 00:00:00 2001
+From: Wouter Wijngaards <wouter@nlnetlabs.nl>
+Date: Mon, 22 Oct 2018 10:07:13 +0000
+Subject: [PATCH] - Fix #4192: unbound-control-setup generates keys not
+ readable by   group.
+
+git-svn-id: file:///svn/unbound/trunk@4942 be551aaa-1e26-0410-a405-d3ace91eadb9
+---
+ smallapp/unbound-control-setup.sh.in | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/smallapp/unbound-control-setup.sh.in b/smallapp/unbound-control-setup.sh.in
+index 0d759f44..f4024b43 100644
+--- a/smallapp/unbound-control-setup.sh.in
++++ b/smallapp/unbound-control-setup.sh.in
+@@ -148,8 +148,8 @@ test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
+ # echo "empty password is used, simply click OK on the password dialog box."
+ # openssl pkcs12 -export -in $CTL_BASE"_trust.pem" -inkey $CTL_BASE.key -name "unbound remote control client cert" -out $CTL_BASE"_browser.pfx" -password "pass:" || error "could not create browser certificate"
+ 
+-# remove unused permissions
+-chmod o-rw $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
++# set desired permissions
++chmod 0640 $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
+ 
+ # remove crap
+ rm -f request.cfg
+-- 
+2.14.4
+
