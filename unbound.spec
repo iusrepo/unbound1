@@ -33,8 +33,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.8.1
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.8.2
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -420,6 +420,12 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue Dec 04 2018 Paul Wouters <pwouters@redhat.com> - 1.8.2-1
+- Updated to 1.8.2.
+- Enabled deny ANY query support and edns-tcp-keepalive
+- Set serve-stale timeout to 4h
+- Updated unbound.conf for latest options
+
 * Mon Oct 22 2018 Petr Menšík <pemensik@redhat.com> - 1.8.1-2
 - Allow group by default to unbound-control (#1640259)
 
