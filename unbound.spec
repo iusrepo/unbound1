@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.8.2
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -54,6 +54,8 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+
+Patch1: unbound-1.8.2-dns64.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -149,6 +151,7 @@ Python 3 modules and extensions for unbound
 %setup -qcn %{pkgname}
 
 pushd %{pkgname}
+%patch1 -p1
 
 # only for snapshots
 # autoreconf -iv
@@ -420,6 +423,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Dec 10 2018 Paul Wouters <pwouters@redhat.com> - 1.8.2-2
+- Fix dns64 allocation in wrong region for returned internal queries.
+
 * Tue Dec 04 2018 Paul Wouters <pwouters@redhat.com> - 1.8.2-1
 - Updated to 1.8.2.
 - Enabled deny ANY query support and edns-tcp-keepalive
