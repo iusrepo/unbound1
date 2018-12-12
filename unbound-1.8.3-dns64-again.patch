@@ -1,0 +1,11 @@
+diff -Naur dns64/dns64.c dns64/dns64.c
+--- dns64/dns64.c	2018-12-11 04:46:02.000000000 -0500
++++ dns64/dns64.c	2018-12-12 12:39:30.589057421 -0500
+@@ -628,6 +628,7 @@
+ 
+ 	/* Store the response in cache. */
+ 	if ( (!iq || !iq->started_no_cache_store) &&
++		qstate->return_msg && qstate->return_msg->rep &&
+ 		!dns_cache_store(qstate->env, &qstate->qinfo, qstate->return_msg->rep,
+ 		0, 0, 0, NULL, qstate->query_flags))
+ 		log_err("out of memory");
