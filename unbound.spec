@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.8.3
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Release: 3%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -423,6 +423,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Fri Jan 11 2019 Paul Wouters <pwouters@redhat.com> - 1.8.3-3
+- Remove KSK-2010 from configs - it has been revoked
+
 * Wed Dec 12 2018 Paul Wouters <pwouters@redhat.com> - 1.8.3-2
 - Another dns64 fixup
 
