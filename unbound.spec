@@ -36,8 +36,8 @@ Name: unbound
 Version: 1.9.6
 Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
-Url: https://www.unbound.net/
-Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
+Url: https://nlnetlabs.nl/projects/unbound/
+Source: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz
 Source1: unbound.service
 Source2: unbound.conf
 Source3: unbound.munin
@@ -156,10 +156,11 @@ Python 3 modules and extensions for unbound
 %global dir_primary %{pkgname}
 %endif
 
-%setup -qcn %{pkgname}
+%autosetup -c -N -n %{pkgname}
 
 pushd %{pkgname}
 # patches go here
+%autopatch -p1
 
 # only for snapshots
 # autoreconf -iv
