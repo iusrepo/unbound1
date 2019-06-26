@@ -315,17 +315,6 @@ fi
 %{?ldconfig}
 %systemd_postun_with_restart unbound-anchor.timer
 
-%triggerun -- unbound < 1.4.12-4
-# Save the current service runlevel info
-# User must manually run systemd-sysv-convert --apply unbound
-# to migrate them to systemd targets
-/usr/bin/systemd-sysv-convert --save unbound >/dev/null 2>&1 ||:
-
-# Run these because the SysV package being removed won't do them
-/sbin/chkconfig --del unbound >/dev/null 2>&1 || :
-/bin/systemctl try-restart unbound.service >/dev/null 2>&1 || :
-/bin/systemctl try-restart unbound-keygen.service >/dev/null 2>&1 || :
-
 %check
 pushd %{dir_primary}
 #pushd pythonmod
