@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.8.3
-Release: 5%{?extra_version:.%{extra_version}}%{?dist}
+Release: 6%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -67,12 +67,11 @@ BuildRequires: python2-devel swig
 %if 0%{with_python3}
 BuildRequires: python3-devel swig
 %endif # with_python3
-BuildRequires: systemd
+BuildRequires: systemd-rpm-macros
 # Required for SVN versions
 # BuildRequires: bison
 # BuildRequires: automake autoconf libtool
 
-%{?systemd_requires}
 # Needed because /usr/sbin/unbound links unbound libs staticly
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
@@ -108,7 +107,6 @@ The devel package contains the unbound library and the include files
 
 %package libs
 Summary: Libraries used by the unbound server and client applications
-%{?systemd_requires}
 Requires(pre): shadow-utils
 
 %description libs
@@ -423,6 +421,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Mon Aug  5 2019 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1.8.3-6
+- Drop install-time requirements on systemd (#1723777)
+
 * Sat Jul 27 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1.8.3-5
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_31_Mass_Rebuild
 
