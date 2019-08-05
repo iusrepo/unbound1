@@ -8,11 +8,11 @@
 
 %if 0%{with_python2}
 %global python_primary %{__python2}
-%endif # with_python2
+%endif
 
 %if 0%{with_python3}
 %global python_primary %{__python3}
-%endif # with_python3
+%endif
 
 %if 0%{?rhel}
 %global with_munin   0
@@ -22,14 +22,14 @@
 %{!?__python2: %global __python2 /usr/bin/python2}
 %{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
-%endif # with_python2 && rhel <= 6
+%endif
 
 %if 0%{?rhel} <= 7
 %global with_python3 0
 %else
 %global with_python2 0
-%endif # rhel <= 7
-%endif # rhel
+%endif
+%endif
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
@@ -63,10 +63,10 @@ BuildRequires: libevent-devel expat-devel
 BuildRequires: pkgconfig
 %if 0%{with_python2}
 BuildRequires: python2-devel swig
-%endif # with_python
+%endif
 %if 0%{with_python3}
 BuildRequires: python3-devel swig
-%endif # with_python3
+%endif
 BuildRequires: systemd-rpm-macros
 # Required for SVN versions
 # BuildRequires: bison
@@ -122,7 +122,7 @@ Obsoletes: unbound-python < %{version}-%{release}
 
 %description -n python2-unbound
 Python 2 modules and extensions for unbound
-%endif # with_python
+%endif
 
 %if 0%{with_python3}
 %package -n python3-unbound
@@ -131,7 +131,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 %description -n python3-unbound
 Python 3 modules and extensions for unbound
-%endif # with_python3
+%endif
 
 
 %prep
@@ -144,7 +144,7 @@ Python 3 modules and extensions for unbound
 %global python_secondary %{__python2}
 %else
 %global dir_primary %{pkgname}
-%endif # with_python2 && with_python3
+%endif
 
 %setup -qcn %{pkgname}
 
@@ -182,7 +182,7 @@ pushd %{dir_primary}
 %configure  \
 %if 0%{?python_primary:1}
             --with-pythonmodule --with-pyunbound PYTHON=%{python_primary} \
-%endif # python_primary
+%endif
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
@@ -198,7 +198,7 @@ pushd %{dir_secondary}
 
 %{__make} %{?_smp_mflags}
 popd
-%endif # python_secondary
+%endif
 
 
 %install
@@ -209,7 +209,7 @@ install -p -m 0644 %{SOURCE16} .
 pushd %{dir_secondary}
 %{__make} DESTDIR=%{buildroot} unbound-event-install install
 popd
-%endif # python_secondary
+%endif
 
 pushd %{dir_primary}
 %{__make} DESTDIR=%{buildroot} unbound-event-install install
@@ -256,11 +256,11 @@ rm %{buildroot}%{_libdir}/*.la
 
 %if 0%{with_python2}
 rm %{buildroot}%{python2_sitearch}/*.la
-%endif # with_python
+%endif
 
 %if 0%{with_python3}
 rm %{buildroot}%{python3_sitearch}/*.la
-%endif # with_python3
+%endif
 
 # create softlink for all functions of libunbound man pages
 for mpage in ub_ctx ub_result ub_ctx_create ub_ctx_delete ub_ctx_set_option ub_ctx_get_option ub_ctx_config ub_ctx_set_fwd ub_ctx_resolvconf ub_ctx_hosts ub_ctx_add_ta ub_ctx_add_ta_file ub_ctx_trustedkeys ub_ctx_debugout ub_ctx_debuglevel ub_ctx_async ub_poll ub_wait ub_fd ub_process ub_resolve ub_resolve_async ub_cancel ub_resolve_free ub_strerror ub_ctx_print_local_zones ub_ctx_zone_add ub_ctx_zone_remove ub_ctx_data_add ub_ctx_data_remove;
@@ -332,7 +332,7 @@ pushd %{dir_secondary}
 #popd
 make check
 popd
-%endif # python_secondary
+%endif
 
 
 %files
