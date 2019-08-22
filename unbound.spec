@@ -1,4 +1,4 @@
-%{?!with_python2:     %global with_python2     1}
+%{?!with_python2:     %global with_python2     0}
 %{?!with_python3:     %global with_python3     1}
 %{?!with_munin:       %global with_munin       1}
 
@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.8.3
-Release: 7%{?extra_version:.%{extra_version}}%{?dist}
+Release: 8%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -410,6 +410,10 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Thu Aug 22 2019 Miro Hrončok <mhroncok@redhat.com> - 1.8.3-8
+- Subpackage python2-unbound has been removed
+  See https://fedoraproject.org/wiki/Changes/Mass_Python_2_Package_Removal
+
 * Thu Aug 15 2019 Miro Hrončok <mhroncok@redhat.com> - 1.8.3-7
 - Rebuilt for Python 3.8
 
