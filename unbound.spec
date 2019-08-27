@@ -33,8 +33,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.8.3
-Release: 8%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.9.3
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -54,8 +54,6 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
-
-Patch1: unbound-1.8.3-dns64-again.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -149,7 +147,7 @@ Python 3 modules and extensions for unbound
 %setup -qcn %{pkgname}
 
 pushd %{pkgname}
-%patch1
+# patches go here
 
 # only for snapshots
 # autoreconf -iv
@@ -173,7 +171,7 @@ cp -a %{dir_primary} %{dir_secondary}
             --enable-relro-now --enable-pie \\\
             --enable-subnet --enable-ipsecmod \\\
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \\\
-            --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \\\
+            --with-pidfile=%{_rundir}/%{name}/%{name}.pid \\\
             --enable-sha2 --disable-gost --enable-ecdsa \\\
             --with-rootkey-file=%{_sharedstatedir}/unbound/root.key
 
@@ -410,6 +408,12 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue Aug 27 2019 Paul Wouters <pwouters@redhat.com> - 1.9.3-1
+- Updated to 1.9.3
+- Resolves: rhbz#1672578 unbound-1.9.2 is available
+- Resolves: rhbz#1694831 [/usr/lib/tmpfiles.d/unbound.conf:1] Line references path below legacy directory /var/run/
+- Resolves: rhbz# 1667387 [abrt] unbound: memmove(): unbound killed by SIGABRT
+
 * Thu Aug 22 2019 Miro Hrončok <mhroncok@redhat.com> - 1.8.3-8
 - Subpackage python2-unbound has been removed
   See https://fedoraproject.org/wiki/Changes/Mass_Python_2_Package_Removal
