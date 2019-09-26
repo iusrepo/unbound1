@@ -34,7 +34,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.9.3
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -65,7 +65,11 @@ BuildRequires: python2-devel swig
 %if 0%{with_python3}
 BuildRequires: python3-devel swig
 %endif
+%if 0%{fedora} >= 30
 BuildRequires: systemd-rpm-macros
+%else
+BuildRequires: systemd
+%endif
 # Required for SVN versions
 # BuildRequires: bison
 # BuildRequires: automake autoconf libtool
@@ -126,6 +130,10 @@ Python 2 modules and extensions for unbound
 %package -n python3-unbound
 Summary: Python 3 modules and extensions for unbound
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+%if ! 0%{with_python2}
+# Make explicit conflict with no longer provided python package
+Obsoletes: python2-unbound <= 1.8.3
+%endif
 
 %description -n python3-unbound
 Python 3 modules and extensions for unbound
@@ -408,6 +416,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Thu Sep 26 2019 Petr Menšík <pihhan@gmail.com> - 1.9.3-2
+- Obsolete no longer provided python2 subpackage (#1749400)
+
 * Tue Aug 27 2019 Paul Wouters <pwouters@redhat.com> - 1.9.3-1
 - Updated to 1.9.3
 - Resolves: rhbz#1672578 unbound-1.9.2 is available
