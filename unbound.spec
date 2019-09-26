@@ -110,6 +110,10 @@ The devel package contains the unbound library and the include files
 %package libs
 Summary: Libraries used by the unbound server and client applications
 Requires(pre): shadow-utils
+%if ! 0%{with_python2}
+# Make explicit conflict with no longer provided python package
+Obsoletes: python2-unbound < 1.9.3
+%endif
 
 %description libs
 Contains libraries used by the unbound server and client applications
@@ -132,7 +136,7 @@ Summary: Python 3 modules and extensions for unbound
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 %if ! 0%{with_python2}
 # Make explicit conflict with no longer provided python package
-Obsoletes: python2-unbound <= 1.8.3
+Conflicts: python2-unbound < 1.9.3
 %endif
 
 %description -n python3-unbound
