@@ -33,8 +33,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.9.3
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.9.4
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
 Source: https://www.unbound.net/downloads/%{name}-%{version}%{?extra_version}.tar.gz
@@ -65,7 +65,7 @@ BuildRequires: python2-devel swig
 %if 0%{with_python3}
 BuildRequires: python3-devel swig
 %endif
-%if 0%{fedora} >= 30
+%if 0%{?fedora} >= 30
 BuildRequires: systemd-rpm-macros
 %else
 BuildRequires: systemd
@@ -420,6 +420,10 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Fri Nov 01 2019 Paul Wouters <pwouters@redhat.com> - 1.9.4-1
+- Fix build on rhel/centos systems
+- Resolves: rhbz#1767955 (CVE-2019-16866) uninitialized memory accesses leads to crash via a crafted NOTIFY query
+
 * Thu Sep 26 2019 Petr Menšík <pihhan@gmail.com> - 1.9.3-2
 - Obsolete no longer provided python2 subpackage (#1749400)
 
