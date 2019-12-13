@@ -33,7 +33,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.9.4
+Version: 1.9.6
 Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://www.unbound.net/
@@ -420,6 +420,10 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Fri Dec 13 2019 Paul Wouters <pwouters@redhat.com> - 1.9.6-1
+- Resolves: rhbz#1758107 unbound-1.9.5 is available
+- Resolves: CVE-2019-18934
+
 * Fri Nov 01 2019 Paul Wouters <pwouters@redhat.com> - 1.9.4-1
 - Fix build on rhel/centos systems
 - Resolves: rhbz#1767955 (CVE-2019-16866) uninitialized memory accesses leads to crash via a crafted NOTIFY query
