@@ -33,8 +33,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.9.6
-Release: 2%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.10.0
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://nlnetlabs.nl/projects/unbound/
 Source: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz
@@ -54,6 +54,7 @@ Source14: unbound.sysconfig
 Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
+Source18: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz.asc
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -421,6 +422,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Thu Mar 19 2020 Petr Menšík <pemensik@redhat.com> - 1.10.0-1
+- Update to 1.10.0 (#1805199)
+
 * Fri Jan 31 2020 Fedora Release Engineering <releng@fedoraproject.org> - 1.9.6-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
 
