@@ -55,11 +55,13 @@ Source15: unbound-anchor.timer
 Source16: unbound-munin.README
 Source17: unbound-anchor.service
 Source18: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz.asc
+Source19: http://keys.gnupg.net/pks/lookup?op=get&search=0x9F6F1C2D7E045F8D#/wouter.nlnetlabs.nl.key
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
 BuildRequires: libevent-devel expat-devel
 BuildRequires: pkgconfig
+BuildRequires: gnupg2
 %if 0%{with_python2}
 BuildRequires: python2-devel swig
 %endif
@@ -146,6 +148,7 @@ Python 3 modules and extensions for unbound
 
 
 %prep
+%{?gpgverify:%gpgverify -k 19 -s 18 -d 0}
 %global pkgname %{name}-%{version}%{?extra_version}
 
 %if 0%{with_python2} && 0%{with_python3}
