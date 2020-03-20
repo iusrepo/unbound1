@@ -1,6 +1,8 @@
 %{?!with_python2:     %global with_python2     0}
 %{?!with_python3:     %global with_python3     1}
 %{?!with_munin:       %global with_munin       1}
+%bcond_with    dnstap
+%bcond_with    systemd
 
 %global _hardened_build 1
 
@@ -67,6 +69,12 @@ BuildRequires: python2-devel swig
 %endif
 %if 0%{with_python3}
 BuildRequires: python3-devel swig
+%endif
+%if %{with dnstap}
+BuildRequires: fstrm-devel protobuf-c-devel
+%endif
+%if %{with systemd}
+BuildRequires: systemd-devel
 %endif
 %if 0%{?fedora} >= 30
 BuildRequires: systemd-rpm-macros
@@ -198,6 +206,12 @@ pushd %{dir_primary}
 %if 0%{?python_primary:1}
             --with-pythonmodule --with-pyunbound PYTHON=%{python_primary} \
 %endif
+%if %{with dnstap}
+            --enable-dnstap \
+%endif
+%if %{with systemd}
+            --enable-systemd \
+%endif
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
@@ -209,6 +223,12 @@ popd
 pushd %{dir_secondary}
 %configure  \
             --with-pythonmodule --with-pyunbound PYTHON=%{python_secondary} \
+%if %{with dnstap}
+            --enable-dnstap \
+%endif
+%if %{with systemd}
+            --enable-systemd \
+%endif
             %{configure_args}
 
 %{__make} %{?_smp_mflags}
