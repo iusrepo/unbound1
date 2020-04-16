@@ -59,6 +59,7 @@ Source17: unbound-anchor.service
 Source18: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz.asc
 Source19: http://keys.gnupg.net/pks/lookup?op=get&search=0x9F6F1C2D7E045F8D#/wouter.nlnetlabs.nl.key
 
+# https://github.com/NLnetLabs/unbound/issues/220
 Patch0: unbound-1.10.0-auth-callback.patch
 
 BuildRequires: gcc, make
