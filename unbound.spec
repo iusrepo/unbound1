@@ -36,7 +36,7 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
 Version: 1.10.0
-Release: 1%{?extra_version:.%{extra_version}}%{?dist}
+Release: 2%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://nlnetlabs.nl/projects/unbound/
 Source: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz
@@ -58,6 +58,8 @@ Source16: unbound-munin.README
 Source17: unbound-anchor.service
 Source18: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz.asc
 Source19: http://keys.gnupg.net/pks/lookup?op=get&search=0x9F6F1C2D7E045F8D#/wouter.nlnetlabs.nl.key
+
+Patch0: unbound-1.10.0-auth-callback.patch
 
 BuildRequires: gcc, make
 BuildRequires: flex, openssl-devel
@@ -445,6 +447,9 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Thu Apr 16 2020 Artem Egorenkov <aegorenk@redhat.com> - 1.10.0-2
+- Resolves: rhbz#1824536 unbound crash
+
 * Thu Mar 19 2020 Petr Menšík <pemensik@redhat.com> - 1.10.0-1
 - Update to 1.10.0 (#1805199)
 

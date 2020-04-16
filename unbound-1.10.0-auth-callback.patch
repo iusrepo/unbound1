@@ -1,0 +1,74 @@
+--- a/services/authzone.c	2020-04-16 13:01:10.550618034 +0200
++++ b/services/authzone.c	2020-04-16 13:07:04.624476160 +0200
+@@ -5331,7 +5331,7 @@
+ 	log_assert(xfr->task_transfer);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_transfer->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return; /* stop on quit */
+ 	}
+@@ -5770,7 +5770,7 @@
+ 	log_assert(xfr->task_transfer);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_transfer->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return; /* stop on quit */
+ 	}
+@@ -5812,7 +5812,7 @@
+ 	log_assert(xfr->task_transfer);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_transfer->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return 0; /* stop on quit */
+ 	}
+@@ -5893,7 +5893,7 @@
+ 	log_assert(xfr->task_transfer);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_transfer->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return 0; /* stop on quit */
+ 	}
+@@ -6107,7 +6107,7 @@
+ 	log_assert(xfr->task_probe);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_probe->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return; /* stop on quit */
+ 	}
+@@ -6143,7 +6143,7 @@
+ 	log_assert(xfr->task_probe);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_probe->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return 0; /* stop on quit */
+ 	}
+@@ -6388,7 +6388,7 @@
+ 	log_assert(xfr->task_probe);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_probe->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return; /* stop on quit */
+ 	}
+@@ -6465,7 +6465,7 @@
+ 	log_assert(xfr->task_nextprobe);
+ 	lock_basic_lock(&xfr->lock);
+ 	env = xfr->task_nextprobe->env;
+-	if(env->outnet->want_to_quit) {
++	if(!env || env->outnet->want_to_quit) {
+ 		lock_basic_unlock(&xfr->lock);
+ 		return; /* stop on quit */
+ 	}
