@@ -35,8 +35,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.10.0
-Release: 3%{?extra_version:.%{extra_version}}%{?dist}
+Version: 1.10.1
+Release: 1%{?extra_version:.%{extra_version}}%{?dist}
 License: BSD
 Url: https://nlnetlabs.nl/projects/unbound/
 Source: https://nlnetlabs.nl/downloads/%{name}/%{name}-%{version}%{?extra_version}.tar.gz
@@ -448,6 +448,12 @@ popd
 %attr(0644,root,root) %config %{_sysconfdir}/%{name}/root.key
 
 %changelog
+* Tue May 19 2020 Paul Wouters <pwouters@redhat.com> - 1.10.1-1
+- Resolves: rhbz#1837279 unbound-1.10.1 is available
+- Resolves: rhbz#1837598 CVE-2020-12662 unbound: insufficient control of network message volume leads to DoS
+- Resolves: rhbz#1837609 CVE-2020-12663 unbound: infinite loop via malformed DNS answers received from upstream servers
+- Updated unbound.conf for new options in 1.10.1
+
 * Wed Apr 29 2020 Paul Wouters <pwouters@redhat.com> - 1.10.0-3
 - Resolves: rhbz#1667742 SELinux is preventing unbound from 'name_bind' accesses on the udp_socket port 61000.
 
